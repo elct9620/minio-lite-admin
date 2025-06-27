@@ -1,7 +1,12 @@
 package main
 
 import (
+	"context"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/elct9620/minio-lite-admin/internal/config"
 	httpHandler "github.com/elct9620/minio-lite-admin/internal/handler/http"
@@ -40,6 +45,12 @@ func main() {
 		log.Fatal().Err(err).Msg("Failed to create HTTP service")
 	}
 
+	// Create HTTP server
+	server := &http.Server{
+		Addr:    cfg.Server.Addr,
+		Handler: r,
+	}
+
 	// Start server
 	log.Info().Str("addr", cfg.Server.Addr).Msg("Server starting")
 	if cfg.Server.Dev {
@@ -50,7 +61,32 @@ func main() {
 		log.Info().Msg("Running in production mode")
 	}
 
-	if err := http.ListenAndServe(cfg.Server.Addr, r); err != nil {
-		log.Fatal().Err(err).Msg("Server failed to start")
+	// Channel to listen for interrupt signal to terminate server gracefully
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	// Start server in a goroutine
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal().Err(err).Msg("Server failed to start")
+		}
+	}()
+
+	log.Info().Msg("Server started successfully")
+
+	// Wait for interrupt signal
+	<-quit
+	log.Info().Msg("Shutting down server...")
+
+	// Create a deadline for graceful shutdown
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Attempt graceful shutdown
+	if err := server.Shutdown(ctx); err != nil {
+		log.Error().Err(err).Msg("Server forced to shutdown")
+		return
 	}
+
+	log.Info().Msg("Server shutdown complete")
 }
