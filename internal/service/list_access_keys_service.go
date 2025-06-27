@@ -161,6 +161,11 @@ func (s *ListAccessKeysService) Execute(ctx context.Context, opts ListAccessKeys
 
 	logger.Debug().Int("count", len(allAccessKeys)).Msg("Successfully listed access keys")
 
+	// Ensure accessKeys is never nil for JSON serialization
+	if allAccessKeys == nil {
+		allAccessKeys = []AccessKeyInfo{}
+	}
+
 	return &ListAccessKeysResponse{
 		AccessKeys: allAccessKeys,
 		Total:      len(allAccessKeys),
