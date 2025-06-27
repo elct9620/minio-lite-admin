@@ -2,7 +2,6 @@ package main
 
 import (
 	"embed"
-	"flag"
 	"fmt"
 	"html/template"
 	"io/fs"
@@ -10,6 +9,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/elct9620/minio-lite-admin/internal/config"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/olivere/vite"
@@ -33,11 +33,8 @@ const indexTemplate = `<!doctype html>
 </html>`
 
 func main() {
-	var (
-		addr  = flag.String("addr", ":8080", "HTTP server address")
-		isDev = flag.Bool("dev", false, "run in development mode")
-	)
-	flag.Parse()
+	// Load configuration
+	cfg := config.Load()
 
 	// Set up Chi router
 	r := chi.NewRouter()
@@ -57,7 +54,7 @@ func main() {
 	r.Get("/*", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" && r.URL.Path != "/index.html" {
 			// Serve static assets
-			if *isDev {
+			if cfg.Server.Dev {
 				// In dev mode, serve from filesystem
 				http.FileServer(http.Dir(".")).ServeHTTP(w, r)
 			} else {
@@ -76,16 +73,12 @@ func main() {
 		var viteFragment *vite.Fragment
 		var err error
 
-		if *isDev {
-			viteURL := os.Getenv("VITE_URL")
-			if viteURL == "" {
-				viteURL = "http://localhost:5173"
-			}
+		if cfg.Server.Dev {
 			viteFragment, err = vite.HTMLFragment(vite.Config{
 				FS:        os.DirFS("."),
 				IsDev:     true,
-				ViteURL:   viteURL,
-				ViteEntry: "/src/main.ts",
+				ViteURL:   cfg.Vite.URL,
+				ViteEntry: cfg.Vite.Entry,
 			})
 		} else {
 			sub, err := fs.Sub(distFS, "dist")
@@ -120,15 +113,16 @@ func main() {
 	})
 
 	// Start server
-	log.Printf("Server starting on %s", *addr)
-	if *isDev {
+	log.Printf("Server starting on %s", cfg.Server.Addr)
+	if cfg.Server.Dev {
 		log.Println("Running in development mode")
+		log.Printf("Vite dev server URL: %s", cfg.Vite.URL)
 		log.Println("Make sure to run 'npm run dev' for the Vite dev server")
 	} else {
 		log.Println("Running in production mode")
 	}
 
-	if err := http.ListenAndServe(*addr, r); err != nil {
+	if err := http.ListenAndServe(cfg.Server.Addr, r); err != nil {
 		log.Fatal(err)
 	}
 }
