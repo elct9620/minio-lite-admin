@@ -618,6 +618,45 @@ export function useDataUsage() {
 - **Development Mode**: Hot reloading with backend changes
 - **Production Builds**: Optimized bundles embedded in Go binary
 
+### SPA Routing Support
+
+**Backend Route Handling for Client-Side Routing**:
+The backend properly supports Vue Router client-side navigation by serving the SPA index.html for all non-API, non-static-asset requests:
+
+```go
+// Backend routing pattern
+router.Route("/api", func(r chi.Router) {
+    // All API endpoints under /api prefix
+    r.Get("/health", svc.GetHealthHandler)
+    r.Get("/server-info", svc.GetServerInfoHandler)
+    r.Get("/data-usage", svc.GetDataUsageHandler)
+})
+
+// Catch-all for frontend routes - serves SPA index.html
+router.Get("/*", svc.GetRootHandler)
+```
+
+**Static Asset vs SPA Route Detection**:
+```go
+func (s *Service) isStaticAsset(path string) bool {
+    // Detects file extensions for static assets (.js, .css, .png, etc.)
+    // Returns false for paths like /dashboard, /access-keys (SPA routes)
+    // Returns true for paths like /assets/main.js, /favicon.ico
+}
+```
+
+**Route Handling Logic**:
+- **API Routes** (`/api/*`): Handled by API handlers with JSON responses
+- **Static Assets** (`*.js`, `*.css`, `*.png`, etc.): Served from filesystem/embedded assets
+- **SPA Routes** (`/`, `/dashboard`, `/access-keys`, `/site-replication`): Served index.html for Vue Router
+
+**Benefits**:
+- **Direct URL Access**: Users can navigate directly to `/dashboard` or `/access-keys`
+- **Browser Back/Forward**: Full browser history support
+- **Refresh Support**: Page refreshes work correctly on any route
+- **SEO Ready**: Proper URL structure for potential SSR implementation
+- **Clean Separation**: Clear distinction between API and frontend concerns
+
 ## Development Notes
 
 - The project requires Go 1.24+ and Node.js for development

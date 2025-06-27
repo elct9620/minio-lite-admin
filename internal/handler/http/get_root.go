@@ -5,6 +5,8 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/olivere/vite"
 )
@@ -24,12 +26,15 @@ const indexTemplate = `<!doctype html>
 </html>`
 
 // GetRootHandler handles frontend requests with Vite integration
+// This serves the SPA index.html for all non-API routes to support client-side routing
 func (s *Service) GetRootHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" && r.URL.Path != "/index.html" {
+	// Check if this is a static asset request (has file extension)
+	if s.isStaticAsset(r.URL.Path) {
 		s.serveStaticAssets(w, r)
 		return
 	}
 
+	// For all other routes (/, /dashboard, /access-keys, etc.), serve the SPA index.html
 	s.serveIndex(w, r)
 }
 
@@ -92,4 +97,25 @@ func (s *Service) serveIndex(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error executing template", http.StatusInternalServerError)
 		return
 	}
+}
+
+// isStaticAsset determines if a path is for a static asset (has file extension)
+func (s *Service) isStaticAsset(path string) bool {
+	// Get file extension
+	ext := strings.ToLower(filepath.Ext(path))
+
+	// List of static asset extensions
+	staticExtensions := []string{
+		".js", ".css", ".map", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico",
+		".woff", ".woff2", ".ttf", ".eot", ".otf", ".mp4", ".webm", ".mp3",
+		".json", ".xml", ".txt", ".html", ".htm",
+	}
+
+	for _, staticExt := range staticExtensions {
+		if ext == staticExt {
+			return true
+		}
+	}
+
+	return false
 }
