@@ -34,13 +34,11 @@ func main() {
 	// Initialize services
 	getServerInfoService := service.NewGetServerInfoService(minioClient)
 
-	// Set up router with dependencies
-	r := httpHandler.NewRouter(httpHandler.RouterDependencies{
-		Config:               cfg,
-		Logger:               log,
-		GetServerInfoService: getServerInfoService,
-		DistFS:               distFS,
-	})
+	// Set up HTTP service with dependencies
+	r, err := httpHandler.NewService(cfg, log, getServerInfoService, distFS)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to create HTTP service")
+	}
 
 	// Start server
 	log.Info().Str("addr", cfg.Server.Addr).Msg("Server starting")

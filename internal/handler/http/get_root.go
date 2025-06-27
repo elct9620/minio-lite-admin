@@ -1,13 +1,11 @@
 package http
 
 import (
-	"embed"
 	"html/template"
 	"io/fs"
 	"net/http"
 	"os"
 
-	"github.com/elct9620/minio-lite-admin/internal/config"
 	"github.com/olivere/vite"
 )
 
@@ -25,38 +23,24 @@ const indexTemplate = `<!doctype html>
   </body>
 </html>`
 
-// FrontendHandler handles frontend requests with Vite integration
-type FrontendHandler struct {
-	config *config.Config
-	distFS embed.FS
-}
-
-// NewFrontendHandler creates a new frontend handler
-func NewFrontendHandler(cfg *config.Config, distFS embed.FS) *FrontendHandler {
-	return &FrontendHandler{
-		config: cfg,
-		distFS: distFS,
-	}
-}
-
-// ServeHTTP handles frontend requests
-func (h *FrontendHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+// GetRootHandler handles frontend requests with Vite integration
+func (s *Service) GetRootHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" && r.URL.Path != "/index.html" {
-		h.serveStaticAssets(w, r)
+		s.serveStaticAssets(w, r)
 		return
 	}
 
-	h.serveIndex(w, r)
+	s.serveIndex(w, r)
 }
 
 // serveStaticAssets serves static assets (CSS, JS, images, etc.)
-func (h *FrontendHandler) serveStaticAssets(w http.ResponseWriter, r *http.Request) {
-	if h.config.Server.Dev {
+func (s *Service) serveStaticAssets(w http.ResponseWriter, r *http.Request) {
+	if s.config.Server.Dev {
 		// In dev mode, serve from filesystem
 		http.FileServer(http.Dir(".")).ServeHTTP(w, r)
 	} else {
 		// In prod mode, serve from embedded dist
-		sub, err := fs.Sub(h.distFS, "dist")
+		sub, err := fs.Sub(s.distFS, "dist")
 		if err != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
@@ -66,20 +50,20 @@ func (h *FrontendHandler) serveStaticAssets(w http.ResponseWriter, r *http.Reque
 }
 
 // serveIndex serves the main index.html with Vite integration
-func (h *FrontendHandler) serveIndex(w http.ResponseWriter, r *http.Request) {
+func (s *Service) serveIndex(w http.ResponseWriter, r *http.Request) {
 	// Create Vite fragment
 	var viteFragment *vite.Fragment
 	var err error
 
-	if h.config.Server.Dev {
+	if s.config.Server.Dev {
 		viteFragment, err = vite.HTMLFragment(vite.Config{
 			FS:        os.DirFS("."),
 			IsDev:     true,
-			ViteURL:   h.config.Vite.URL,
-			ViteEntry: h.config.Vite.Entry,
+			ViteURL:   s.config.Vite.URL,
+			ViteEntry: s.config.Vite.Entry,
 		})
 	} else {
-		sub, err := fs.Sub(h.distFS, "dist")
+		sub, err := fs.Sub(s.distFS, "dist")
 		if err != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
