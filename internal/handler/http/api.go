@@ -14,14 +14,8 @@ type HealthResponse struct {
 	Service string `json:"service"`
 }
 
-// ServerInfoResponse represents the server info response
+// ServerInfoResponse represents the MinIO server info response
 type ServerInfoResponse struct {
-	Version string `json:"version"`
-	Name    string `json:"name"`
-}
-
-// MinIOServerInfoResponse represents the MinIO server info response
-type MinIOServerInfoResponse struct {
 	Mode         string `json:"mode"`
 	Region       string `json:"region"`
 	DeploymentID string `json:"deploymentId"`
@@ -41,22 +35,8 @@ func HealthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// ServerInfoHandler handles server info requests
-func ServerInfoHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	response := ServerInfoResponse{
-		Version: "0.1.0",
-		Name:    "MinIO Lite Admin",
-	}
-
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-	}
-}
-
-// MinIOServerInfoHandler handles MinIO server info requests
-func MinIOServerInfoHandler(getServerInfoService *service.GetServerInfoService) http.HandlerFunc {
+// ServerInfoHandler handles MinIO server info requests
+func ServerInfoHandler(getServerInfoService *service.GetServerInfoService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		logger := zerolog.Ctx(ctx)
@@ -72,7 +52,7 @@ func MinIOServerInfoHandler(getServerInfoService *service.GetServerInfoService) 
 			return
 		}
 
-		response := MinIOServerInfoResponse{
+		response := ServerInfoResponse{
 			Mode:         info.Mode,
 			Region:       info.Region,
 			DeploymentID: info.DeploymentID,

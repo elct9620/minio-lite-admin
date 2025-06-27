@@ -51,8 +51,7 @@ func main() {
 	// API routes
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/health", httpHandler.HealthHandler)
-		r.Get("/server-info", httpHandler.ServerInfoHandler)
-		r.Get("/minio/server-info", httpHandler.MinIOServerInfoHandler(getServerInfoService))
+		r.Get("/server-info", httpHandler.ServerInfoHandler(getServerInfoService))
 	})
 
 	// Frontend handler

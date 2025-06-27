@@ -44,7 +44,7 @@ internal/
 │   └── get_server_info_service.go # MinIO server info service
 └── handler/
     └── http/        # HTTP handlers
-        ├── api.go   # API endpoints (health, server-info, minio/server-info)
+        ├── api.go   # API endpoints (health, server-info)
         ├── frontend.go # Frontend serving with Vite integration
         └── middleware.go # Custom chi middleware (zerolog request logger)
 ```
@@ -193,7 +193,7 @@ export default defineConfig({
 - ✅ Infrastructure layer with MinIO client factory (`internal/infra`)
 - ✅ Service layer for business logic (`internal/service`)
 - ✅ Context-based logging for request tracing
-- ✅ `/api/minio/server-info` endpoint with MinIO integration
+- ✅ `/api/server-info` endpoint returns MinIO server information
 - ✅ Structured HTTP handlers in `internal/handler/http`
 - ✅ Vue.js 3 + TypeScript frontend scaffold
 - ✅ Docker development environment with watch mode and MinIO service
