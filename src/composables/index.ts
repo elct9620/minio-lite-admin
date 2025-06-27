@@ -1,0 +1,1 @@
+export { useServerInfo } from './useServerInfo'
