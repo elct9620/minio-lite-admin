@@ -677,6 +677,144 @@ tests := []struct {
 - Implement proper encryption in mock servers for v4 compatibility
 - Design unified response structures for multiple data sources
 - Follow conditional options patterns for API client configuration
+
+### API Response Format and Frontend Integration
+
+**Critical Bug: Null vs Empty Array in JSON Responses**
+
+**Problem Identified**:
+During access keys frontend implementation, discovered that Go's JSON marshalling returns `null` for nil slices, causing frontend infinite loading states when no data exists.
+
+```go
+// Problematic - results in {"accessKeys": null, "total": 0}
+var allAccessKeys []AccessKeyInfo
+return &ListAccessKeysResponse{
+    AccessKeys: allAccessKeys, // nil slice marshals to null
+    Total:      len(allAccessKeys),
+}
+```
+
+**Root Cause Analysis**:
+1. **Backend**: Go's `json.Marshal()` converts `nil` slices to `null` in JSON
+2. **Frontend**: JavaScript cannot iterate over `null`, causing errors in Vue reactive systems
+3. **Symptom**: Loading state persists indefinitely, no error messages displayed
+4. **Detection**: Direct API testing with `curl` revealed `{"accessKeys": null}` response
+
+**Solution Implemented**:
+```go
+// Ensure accessKeys is never nil for JSON serialization
+if allAccessKeys == nil {
+    allAccessKeys = []AccessKeyInfo{}
+}
+
+return &ListAccessKeysResponse{
+    AccessKeys: allAccessKeys, // Empty slice marshals to []
+    Total:      len(allAccessKeys),
+}
+```
+
+**Key Technical Insights**:
+- **Go JSON Behavior**: `nil` slices serialize to `null`, empty slices serialize to `[]`
+- **Frontend Expectations**: JavaScript expects arrays for iteration, not `null` values
+- **API Design**: Always return consistent data types, prefer empty arrays over `null`
+- **Debugging Strategy**: Test API endpoints directly before investigating frontend code
+
+**Frontend Integration Patterns**:
+
+**Vue 3 Composables Architecture**:
+```typescript
+// useAccessKeys.ts - Reactive API integration
+export function useAccessKeys() {
+  const accessKeys = ref<AccessKeyInfo[]>([])
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+  
+  const fetchAccessKeys = async (options: AccessKeysOptions = {}) => {
+    loading.value = true
+    try {
+      const response = await fetch(url)
+      const data: AccessKeysResponse = await response.json()
+      accessKeys.value = data.accessKeys // Now guaranteed to be []
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Unknown error'
+      accessKeys.value = [] // Ensure array type consistency
+    } finally {
+      loading.value = false // Always executes
+    }
+  }
+  
+  return { accessKeys, loading, error, fetchAccessKeys }
+}
+```
+
+**Component Architecture Best Practices**:
+```vue
+<!-- Proper loading state handling -->
+<template>
+  <div v-if="loading">Loading...</div>
+  <div v-else-if="error">{{ error }}</div>
+  <div v-else-if="accessKeys.length > 0">
+    <!-- Display data -->
+  </div>
+  <div v-else>
+    <!-- Empty state - only shows when accessKeys is [] -->
+    No access keys found
+  </div>
+</template>
+```
+
+**API Testing and Validation Strategy**:
+
+**Debugging Infinite Loading States**:
+1. **Direct API Testing**: Use `curl` to test endpoints before debugging frontend
+2. **Response Format Validation**: Verify JSON structure matches frontend expectations
+3. **Network Tab Analysis**: Check browser dev tools for actual API responses
+4. **Console Logging**: Add temporary logs in composables to trace execution flow
+5. **Type Safety**: Ensure TypeScript interfaces match actual API responses
+
+**Command-Line Debugging Pattern**:
+```bash
+# Test API endpoint directly
+curl -s http://localhost:8080/api/access-keys | jq .
+
+# Expected correct response:
+# {"accessKeys": [], "total": 0}
+
+# Previous problematic response:
+# {"accessKeys": null, "total": 0}
+```
+
+**Integration Testing Best Practices**:
+- **End-to-End Flow**: Test from API through frontend rendering
+- **Empty State Testing**: Specifically test scenarios with no data
+- **Error State Testing**: Verify error handling for API failures
+- **Loading State Testing**: Ensure loading indicators appear and disappear correctly
+
+**Lessons Learned from Access Keys Implementation**:
+
+**Go Backend Considerations**:
+- Always initialize slices to empty rather than leaving as `nil`
+- Use consistent JSON response structures across all endpoints
+- Implement proper error handling that doesn't break frontend expectations
+- Test API responses with actual HTTP clients, not just unit tests
+
+**Vue.js Frontend Patterns**:
+- Use composables for reusable API integration logic
+- Implement comprehensive loading, error, and empty states
+- Prefer reactive refs over reactive objects for simple state management
+- Structure components with clear conditional rendering logic
+
+**Development Workflow Improvements**:
+- Test API endpoints with `curl` before implementing frontend features
+- Use browser network tab to debug actual HTTP responses
+- Implement proper TypeScript interfaces that match API responses exactly
+- Add proper error boundaries and fallback states in UI components
+
+**Architecture Decision Records**:
+- **API Response Format**: Always return arrays as `[]`, never `null`
+- **Frontend State Management**: Use Vue 3 Composition API with reactive refs
+- **Error Handling**: Consistent error response format across all endpoints
+- **Testing Strategy**: Direct API testing before frontend integration
 - Use table-driven tests for comprehensive API endpoint coverage
 
 ### Frontend Development Workflow
