@@ -36,11 +36,15 @@ The project uses `github.com/olivere/vite` for seamless integration between Go b
 internal/
 ├── config/          # Configuration management with Viper
 │   └── config.go    # Config structs and loading logic
+├── infra/           # Infrastructure layer (factories)
+│   └── minio.go     # MinIO admin client factory
 ├── logger/          # Zerolog configuration and setup
 │   └── logger.go    # Logger initialization and level parsing
+├── service/         # Business logic layer
+│   └── get_server_info_service.go # MinIO server info service
 └── handler/
     └── http/        # HTTP handlers
-        ├── api.go   # API endpoints (health, server-info)
+        ├── api.go   # API endpoints (health, server-info, minio/server-info)
         ├── frontend.go # Frontend serving with Vite integration
         └── middleware.go # Custom chi middleware (zerolog request logger)
 ```
@@ -60,6 +64,9 @@ Uses Viper for robust configuration with multiple sources (priority order):
 - `MINIO_ADMIN_VITE_ENTRY`: Vite entry point (default: `/src/main.ts`)
 - `MINIO_ADMIN_LOG_LEVEL`: Log level (default: `info`, options: trace, debug, info, warn, error, fatal, panic)
 - `MINIO_ADMIN_LOG_PRETTY`: Pretty log output (default: `true`)
+- `MINIO_URL`: MinIO server URL (default: `http://localhost:9000`)
+- `MINIO_ROOT_USER`: MinIO root username (required)
+- `MINIO_ROOT_PASSWORD`: MinIO root password (required)
 
 ### Handler Architecture
 
@@ -182,19 +189,23 @@ export default defineConfig({
 - ✅ Chi router with custom zerolog middleware (Recoverer, RequestID)
 - ✅ Viper configuration management (flags, env vars, config files)
 - ✅ Zerolog structured logging with configurable levels and pretty printing
+- ✅ MinIO Admin SDK integration with service layer architecture
+- ✅ Infrastructure layer with MinIO client factory (`internal/infra`)
+- ✅ Service layer for business logic (`internal/service`)
+- ✅ Context-based logging for request tracing
+- ✅ `/api/minio/server-info` endpoint with MinIO integration
 - ✅ Structured HTTP handlers in `internal/handler/http`
 - ✅ Vue.js 3 + TypeScript frontend scaffold
-- ✅ Docker development environment with watch mode
+- ✅ Docker development environment with watch mode and MinIO service
 - ✅ Production Docker build with multi-stage process
 - ✅ Development/production mode switching
 
 **Next Steps (TODO)**:
-- MinIO Admin SDK integration (`github.com/minio/madmin-go`)
-- Actual MinIO administrative features (disk status, access keys, replication)
+- Additional MinIO administrative features (disk status, access keys, replication)
 - Frontend components for MinIO management UI
-- MinIO connection configuration and validation
+- MinIO connection health check and validation
 - Authentication and authorization system
-- API endpoint implementation for MinIO operations
+- More API endpoints for MinIO operations (buckets, users, policies)
 
 ## License Constraints
 

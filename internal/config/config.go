@@ -12,6 +12,7 @@ type Config struct {
 	Server Server `mapstructure:"server"`
 	Vite   Vite   `mapstructure:"vite"`
 	Logger Logger `mapstructure:"logger"`
+	MinIO  MinIO  `mapstructure:"minio"`
 }
 
 // Server configuration
@@ -32,6 +33,13 @@ type Logger struct {
 	Pretty bool   `mapstructure:"pretty"`
 }
 
+// MinIO configuration
+type MinIO struct {
+	URL      string `mapstructure:"url"`
+	RootUser string `mapstructure:"root_user"`
+	Password string `mapstructure:"password"`
+}
+
 // Load loads configuration from flags, environment variables, and config files
 func Load() *Config {
 	// Set up Viper
@@ -47,6 +55,9 @@ func Load() *Config {
 	viper.SetDefault("vite.entry", "/src/main.ts")
 	viper.SetDefault("logger.level", "info")
 	viper.SetDefault("logger.pretty", true)
+	viper.SetDefault("minio.url", "http://localhost:9000")
+	viper.SetDefault("minio.root_user", "")
+	viper.SetDefault("minio.password", "")
 
 	// Environment variable bindings
 	viper.SetEnvPrefix("MINIO_ADMIN")
@@ -59,6 +70,9 @@ func Load() *Config {
 	viper.BindEnv("vite.entry", "VITE_ENTRY")
 	viper.BindEnv("logger.level", "LOG_LEVEL")
 	viper.BindEnv("logger.pretty", "LOG_PRETTY")
+	viper.BindEnv("minio.url", "MINIO_URL")
+	viper.BindEnv("minio.root_user", "MINIO_ROOT_USER")
+	viper.BindEnv("minio.password", "MINIO_ROOT_PASSWORD")
 
 	// Parse command line flags
 	addr := flag.String("addr", viper.GetString("server.addr"), "HTTP server address")
