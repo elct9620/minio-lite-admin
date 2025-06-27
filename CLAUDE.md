@@ -23,9 +23,37 @@ The project uses `github.com/olivere/vite` for seamless integration between Go b
 ### Backend Architecture
 
 - **HTTP Router**: Chi router (`github.com/go-chi/chi/v5`) with middleware (Logger, Recoverer, RequestID)
-- **API Structure**: RESTful endpoints under `/api` prefix
+- **Configuration**: Viper-based config management with flags, environment variables, and YAML support
+- **Handler Structure**: Organized in `internal/handler/http` package with separation of concerns
+- **API Structure**: RESTful endpoints under `/api` prefix with structured JSON responses
 - **Integration**: Uses `github.com/olivere/vite` for HTML fragment generation and asset serving
 - **Deployment**: Single binary with embedded frontend assets
+
+### Project Structure
+
+```
+internal/
+├── config/          # Configuration management with Viper
+│   └── config.go    # Config structs and loading logic
+└── handler/
+    └── http/        # HTTP handlers
+        ├── api.go   # API endpoints (health, server-info)
+        └── frontend.go # Frontend serving with Vite integration
+```
+
+### Configuration Management
+
+Uses Viper for robust configuration with multiple sources (priority order):
+1. **Command line flags** (highest priority)
+2. **Environment variables** (`MINIO_ADMIN_*` prefix)
+3. **Configuration files** (YAML)
+4. **Default values** (lowest priority)
+
+### Handler Architecture
+
+- **API Handlers**: Type-safe JSON responses with proper error handling
+- **Frontend Handler**: Dependency injection pattern with config and embedded assets
+- **Separation of Concerns**: Clean boundaries between routing, configuration, and business logic
 
 ### Frontend Architecture
 
@@ -53,20 +81,33 @@ pnpm preview
 
 ### Backend Development
 ```bash
-# Development mode (requires Vite dev server running)
-go run main.go -dev
+# Development mode (preferred for development)
+go run ./main.go -dev
 
 # Production mode (serves embedded assets)
-go run main.go
+go run ./main.go
 
 # Custom port
-go run main.go -addr :3000
+go run ./main.go -addr :3000
+
+# Build binary for verification (outputs to bin/)
+go build . -o bin/minio-lite-admin
+./bin/minio-lite-admin -dev
 ```
 
 ### Full Development Workflow
 1. Terminal 1: `pnpm dev` (starts Vite dev server)
-2. Terminal 2: `go run main.go -dev` (starts Go server in dev mode)
+2. Terminal 2: `go run ./main.go -dev` (starts Go server in dev mode)
 3. Visit http://localhost:8080
+
+### Docker Development
+```bash
+# Start full development environment with watch mode
+docker compose up --watch
+
+# Build production Docker image
+docker build -t minio-lite-admin .
+```
 
 ## Key Implementation Details
 
@@ -96,7 +137,13 @@ viteFragment, err := vite.HTMLFragment(vite.Config{
 })
 ```
 
-**Important**: The `ViteURL` must be accessible by the **browser**, not the Go server. The `olivere/vite` package generates HTML with script tags pointing to this URL - it does NOT proxy Vite assets. In Docker development:
+**Important**: The `ViteURL` must be accessible by the **browser**, not the Go server. The `olivere/vite` package generates HTML with script tags pointing to this URL - it does NOT proxy Vite assets. 
+
+**Asset Serving Strategy**:
+- **Development**: All static assets (JS, CSS, images) are served by Vite dev server at localhost:5173
+- **Production**: All assets are embedded in Go binary after `vite build` creates the `dist/` directory
+
+In Docker development:
 - Use `VITE_URL=http://localhost:5173` (browser-accessible)
 - NOT `http://frontend:5173` (only accessible inside Docker network)
 
@@ -118,17 +165,22 @@ export default defineConfig({
 ### Current State and Next Steps
 
 **Completed**:
-- Basic Go-Vite integration setup
-- Chi router with middleware
-- Vue.js application scaffold
-- Development/production mode switching
+- ✅ Hybrid Go-Vue integration with `olivere/vite`
+- ✅ Chi router with middleware (Logger, Recoverer, RequestID)
+- ✅ Viper configuration management (flags, env vars, config files)
+- ✅ Structured HTTP handlers in `internal/handler/http`
+- ✅ Vue.js 3 + TypeScript frontend scaffold
+- ✅ Docker development environment with watch mode
+- ✅ Production Docker build with multi-stage process
+- ✅ Development/production mode switching
 
-**Missing (TODO)**:
+**Next Steps (TODO)**:
 - MinIO Admin SDK integration (`github.com/minio/madmin-go`)
-- Actual MinIO administrative features
-- Frontend components for MinIO management
-- Configuration system for MinIO connections
-- Authentication and authorization
+- Actual MinIO administrative features (disk status, access keys, replication)
+- Frontend components for MinIO management UI
+- MinIO connection configuration and validation
+- Authentication and authorization system
+- API endpoint implementation for MinIO operations
 
 ## License Constraints
 
@@ -140,4 +192,6 @@ This project uses AGPLv3 license due to dependency on `github.com/minio/madmin-g
 - Frontend assets must be built (`pnpm build`) before production deployment
 - The `dist/.keep` file ensures the dist directory exists for Go embed
 - API endpoints are structured under `/api` prefix for clear separation
-- Static assets are served differently in dev (filesystem) vs prod (embedded) modes
+- Static assets are served by Vite dev server in development, embedded in Go binary in production
+- Build output goes to `bin/` directory (excluded from git) for verification without cleanup
+- Use `go run ./main.go -dev` for development, `go build . -o bin/minio-lite-admin` for verification

@@ -21,6 +21,9 @@ profile.cov
 go.work
 go.work.sum
 
+# Build output directory
+bin/
+
 # env file
 .env
 
