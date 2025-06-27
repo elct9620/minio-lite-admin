@@ -2,35 +2,17 @@ package main
 
 import (
 	"embed"
-	"fmt"
-	"html/template"
-	"io/fs"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/elct9620/minio-lite-admin/internal/config"
+	httpHandler "github.com/elct9620/minio-lite-admin/internal/handler/http"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/olivere/vite"
 )
 
 //go:embed all:dist
 var distFS embed.FS
-
-const indexTemplate = `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MinIO Lite Admin</title>
-    {{ .Vite.Tags }}
-  </head>
-  <body>
-    <div id="app"></div>
-  </body>
-</html>`
 
 func main() {
 	// Load configuration
@@ -46,71 +28,13 @@ func main() {
 
 	// API routes
 	r.Route("/api", func(r chi.Router) {
-		r.Get("/health", healthHandler)
-		r.Get("/server-info", serverInfoHandler)
+		r.Get("/health", httpHandler.HealthHandler)
+		r.Get("/server-info", httpHandler.ServerInfoHandler)
 	})
 
-	// Serve frontend
-	r.Get("/*", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/" && r.URL.Path != "/index.html" {
-			// Serve static assets
-			if cfg.Server.Dev {
-				// In dev mode, serve from filesystem
-				http.FileServer(http.Dir(".")).ServeHTTP(w, r)
-			} else {
-				// In prod mode, serve from embedded dist
-				sub, err := fs.Sub(distFS, "dist")
-				if err != nil {
-					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-					return
-				}
-				http.FileServer(http.FS(sub)).ServeHTTP(w, r)
-			}
-			return
-		}
-
-		// Create Vite fragment
-		var viteFragment *vite.Fragment
-		var err error
-
-		if cfg.Server.Dev {
-			viteFragment, err = vite.HTMLFragment(vite.Config{
-				FS:        os.DirFS("."),
-				IsDev:     true,
-				ViteURL:   cfg.Vite.URL,
-				ViteEntry: cfg.Vite.Entry,
-			})
-		} else {
-			sub, err := fs.Sub(distFS, "dist")
-			if err != nil {
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-			viteFragment, err = vite.HTMLFragment(vite.Config{
-				FS:    sub,
-				IsDev: false,
-			})
-		}
-
-		if err != nil {
-			http.Error(w, "Error creating Vite fragment", http.StatusInternalServerError)
-			return
-		}
-
-		// Parse and execute template
-		tmpl, err := template.New("index").Parse(indexTemplate)
-		if err != nil {
-			http.Error(w, "Error parsing template", http.StatusInternalServerError)
-			return
-		}
-
-		if err = tmpl.Execute(w, map[string]interface{}{
-			"Vite": viteFragment,
-		}); err != nil {
-			http.Error(w, "Error executing template", http.StatusInternalServerError)
-			return
-		}
-	})
+	// Frontend handler
+	frontendHandler := httpHandler.NewFrontendHandler(cfg, distFS)
+	r.Get("/*", frontendHandler.ServeHTTP)
 
 	// Start server
 	log.Printf("Server starting on %s", cfg.Server.Addr)
@@ -125,14 +49,4 @@ func main() {
 	if err := http.ListenAndServe(cfg.Server.Addr, r); err != nil {
 		log.Fatal(err)
 	}
-}
-
-func healthHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, `{"status":"ok","service":"minio-lite-admin"}`)
-}
-
-func serverInfoHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, `{"version":"0.1.0","name":"MinIO Lite Admin"}`)
 }
