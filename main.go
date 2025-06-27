@@ -2,11 +2,11 @@ package main
 
 import (
 	"embed"
-	"log"
 	"net/http"
 
 	"github.com/elct9620/minio-lite-admin/internal/config"
 	httpHandler "github.com/elct9620/minio-lite-admin/internal/handler/http"
+	"github.com/elct9620/minio-lite-admin/internal/logger"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -18,11 +18,18 @@ func main() {
 	// Load configuration
 	cfg := config.Load()
 
+	// Initialize logger
+	log := logger.New(logger.Config{
+		Level:  cfg.Logger.Level,
+		Pretty: cfg.Logger.Pretty,
+	})
+	logger.SetGlobalLogger(log)
+
 	// Set up Chi router
 	r := chi.NewRouter()
 
 	// Add middleware
-	r.Use(middleware.Logger)
+	r.Use(httpHandler.Logger(log))
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RequestID)
 
@@ -37,16 +44,16 @@ func main() {
 	r.Get("/*", frontendHandler.ServeHTTP)
 
 	// Start server
-	log.Printf("Server starting on %s", cfg.Server.Addr)
+	log.Info().Str("addr", cfg.Server.Addr).Msg("Server starting")
 	if cfg.Server.Dev {
-		log.Println("Running in development mode")
-		log.Printf("Vite dev server URL: %s", cfg.Vite.URL)
-		log.Println("Make sure to run 'npm run dev' for the Vite dev server")
+		log.Info().Msg("Running in development mode")
+		log.Info().Str("vite_url", cfg.Vite.URL).Msg("Vite dev server URL")
+		log.Info().Msg("Make sure to run 'pnpm dev' for the Vite dev server")
 	} else {
-		log.Println("Running in production mode")
+		log.Info().Msg("Running in production mode")
 	}
 
 	if err := http.ListenAndServe(cfg.Server.Addr, r); err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("Server failed to start")
 	}
 }
