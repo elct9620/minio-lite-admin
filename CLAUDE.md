@@ -81,6 +81,9 @@ Uses Viper for robust configuration with multiple sources (priority order):
 - **Build Tool**: Vite with TypeScript support
 - **Package Manager**: pnpm (evidenced by `pnpm-lock.yaml`)
 - **Configuration**: Vite configured to generate manifest.json for Go integration
+- **UI Framework**: TailwindCSS 4.1.11 for utility-first styling
+- **Design System**: Modern/minimal dashboard theme with gray color palette
+- **Theming**: Full dark mode support using `dark:` utility classes
 
 ## Development Commands
 
@@ -172,7 +175,7 @@ In Docker development:
 **Vite Configuration** (`vite.config.ts`):
 ```typescript
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [vue(), tailwindcss()],
   build: {
     manifest: true,        // Required for Go integration
     rollupOptions: {
@@ -181,6 +184,22 @@ export default defineConfig({
   }
 })
 ```
+
+### TailwindCSS Configuration
+
+**CSS Setup** (`src/style.css`):
+```css
+@import "tailwindcss";
+```
+
+**Key Features**:
+- **Version**: TailwindCSS 4.1.11 with official Vite plugin
+- **Integration**: `@tailwindcss/vite` plugin for seamless Vite integration
+- **Theme**: Modern/minimal design system with professional styling
+- **Dark Mode**: Full dark mode support using `dark:` utility classes
+- **Responsive**: Mobile-first responsive design with standard breakpoints
+
+**Design Tokens**: See `DESIGN_TOKENS.md` for comprehensive styling guidelines and design system documentation.
 
 ### Current State and Next Steps
 
@@ -196,6 +215,9 @@ export default defineConfig({
 - ✅ `/api/server-info` endpoint returns MinIO server information
 - ✅ Structured HTTP handlers in `internal/handler/http`
 - ✅ Vue.js 3 + TypeScript frontend scaffold
+- ✅ TailwindCSS 4.1.11 integration with modern/minimal dashboard UI
+- ✅ Dashboard with server status card, loading states, and responsive design
+- ✅ Dark mode support and consistent design tokens
 - ✅ Docker development environment with watch mode and MinIO service
 - ✅ Production Docker build with multi-stage process
 - ✅ Development/production mode switching
