@@ -316,6 +316,8 @@ docker run -p 8080:8080 ghcr.io/[owner]/minio-lite-admin:latest
 - ✅ GitHub Actions workflow for automated Docker builds and GHCR publishing
 - ✅ Graceful HTTP server shutdown with signal handling and timeout
 - ✅ Comprehensive API testing with table-driven tests and httptest
+- ✅ Mock MinIO server infrastructure with chi router for external dependency testing
+- ✅ Server-info endpoint testing with success/error scenarios and timeout resolution
 - ✅ Code quality tools integration (go test, golangci-lint, gofmt)
 
 **Next Steps (TODO)**:
@@ -425,6 +427,27 @@ tests := []struct {
 - `get_*_test.go` - Individual handler tests matching file naming convention
 - Test files colocated with implementation for easy discovery
 
+**Mock Infrastructure for External Dependencies**:
+- **Problem**: Testing endpoints that depend on external services (MinIO Admin API)
+- **Solution**: Create mock servers using `httptest.Server` with chi router
+- **Location**: `internal/testability/minio/` - Dedicated package for test infrastructure
+- **Pattern**: Mock servers simulate external API behavior without network dependencies
+
+**Mock MinIO Server Architecture**:
+```go
+// Chi router for clean API endpoint management
+r := chi.NewRouter()
+r.Route("/minio/admin", func(r chi.Router) {
+    r.Get("/v4/info", mock.handleServerInfo)
+    r.Get("/v3/info", mock.handleServerInfo) 
+    r.Get("/info", mock.handleServerInfo)
+})
+
+// Configurable responses for different test scenarios
+mock.SetServerInfoResponse(scenarios.SuccessfulServerInfo())
+mock.SetServerInfoError(400, "Bad Request") // Non-retryable for fast tests
+```
+
 ### Verification and Quality Practices
 
 **Code Quality Workflow**:
@@ -434,6 +457,21 @@ tests := []struct {
 4. Test both development and production build modes
 5. Verify functionality with actual HTTP requests
 6. Commit only after successful verification and linting
+
+**Troubleshooting Test Timeouts**:
+When encountering test timeouts, follow this systematic debugging approach:
+
+1. **Create Simple Test Cases**: Build minimal HTTP servers to isolate the issue
+2. **Test Direct HTTP**: Verify mock server responds quickly to direct HTTP requests
+3. **Check Concurrent Access**: Test multiple simultaneous requests for lock/blocking issues
+4. **Examine Client Behavior**: Investigate if external clients have retry mechanisms
+5. **Status Code Selection**: Choose appropriate HTTP status codes (non-retryable for fast tests)
+
+**Common Timeout Causes**:
+- **Client Retries**: External libraries may retry on certain HTTP status codes (503, 502, 408, 429)
+- **Lock Contention**: Shared resources causing blocking (rarely the actual cause)
+- **Network Issues**: DNS resolution or connection timeouts (use httptest to avoid)
+- **Infinite Loops**: Logic errors in mock server handlers
 
 **Quality Tools**:
 - **go test**: Standard Go testing with coverage analysis
@@ -467,6 +505,14 @@ tests := []struct {
 - Test helpers (testService) reduce duplication and improve maintainability
 - golangci-lint catches issues that go compiler misses
 
+**Mock Testing and Timeout Debugging**:
+- **External client retry behavior** can cause test timeouts (madmin retries HTTP 503 errors)
+- **Systematic debugging approach**: Create simple HTTP servers to isolate issues
+- **Root cause identification**: Test timeouts usually stem from retries, not locks/blocking
+- **Status code selection matters**: Use non-retryable HTTP codes (400, 401, 404) for fast error tests
+- **Chi router in mocks**: Simplifies endpoint management vs hardcoded string matching
+- **httptest.Server performance**: Mock servers respond in microseconds, proving no infrastructure issues
+
 **Architecture Evolution**:
 The project evolved from simple functional handlers to a well-structured service-based architecture while maintaining backward compatibility and improving maintainability.
 
@@ -482,3 +528,5 @@ The project evolved from simple functional handlers to a well-structured service
 - Use `gofmt -w .` to format all Go files before running verification tests
 - Run `go test ./...` to execute all tests with coverage: `go test ./... -cover`
 - Use `golangci-lint run` for comprehensive static code analysis and linting
+- Test specific endpoints: `go test -v ./internal/handler/http -run TestService_GetServerInfoHandler`
+- Run tests with timeout limits: `go test -v ./internal/handler/http -timeout 30s`
