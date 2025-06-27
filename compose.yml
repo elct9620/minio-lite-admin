@@ -1,0 +1,97 @@
+services:
+  # Vue.js frontend with Vite
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - NODE_ENV=development
+    develop:
+      watch:
+        # Sync source files for hot reload
+        - action: sync
+          path: ./src
+          target: /app/src
+        - action: sync
+          path: ./public
+          target: /app/public
+        # Rebuild on dependency changes
+        - action: rebuild
+          path: ./package.json
+        - action: rebuild
+          path: ./pnpm-lock.yaml
+        # Rebuild on Dockerfile changes
+        - action: rebuild
+          path: ./Dockerfile.frontend
+        # Restart on config changes
+        - action: sync+restart
+          path: ./vite.config.ts
+          target: /app/vite.config.ts
+        - action: sync+restart
+          path: ./tsconfig.json
+          target: /app/tsconfig.json
+        - action: sync+restart
+          path: ./tsconfig.app.json
+          target: /app/tsconfig.app.json
+        - action: sync+restart
+          path: ./tsconfig.node.json
+          target: /app/tsconfig.node.json
+
+  # Go backend server
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8080:8080"
+    environment:
+      - CGO_ENABLED=0
+      - GOOS=linux
+      - VITE_URL=http://localhost:5173
+    depends_on:
+      - frontend
+    develop:
+      watch:
+        # Rebuild on Go source changes (including nested directories)
+        - action: rebuild
+          path: ./
+          ignore:
+            - node_modules/
+            - dist/
+            - .git/
+            - "*.md"
+            - "*.yml"
+            - "*.yaml"
+            - "*.json"
+            - "Dockerfile.*"
+        # Rebuild on dependency changes
+        - action: rebuild
+          path: ./go.mod
+        - action: rebuild
+          path: ./go.sum
+        # Rebuild on Dockerfile changes
+        - action: rebuild
+          path: ./Dockerfile.backend
+
+  # MinIO server for testing (optional)
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+volumes:
+  minio_data:

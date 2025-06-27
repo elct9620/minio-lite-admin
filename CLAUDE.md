@@ -96,6 +96,10 @@ viteFragment, err := vite.HTMLFragment(vite.Config{
 })
 ```
 
+**Important**: The `ViteURL` must be accessible by the **browser**, not the Go server. The `olivere/vite` package generates HTML with script tags pointing to this URL - it does NOT proxy Vite assets. In Docker development:
+- Use `VITE_URL=http://localhost:5173` (browser-accessible)
+- NOT `http://frontend:5173` (only accessible inside Docker network)
+
 ### Build Configuration
 
 **Vite Configuration** (`vite.config.ts`):

@@ -77,10 +77,14 @@ func main() {
 		var err error
 
 		if *isDev {
+			viteURL := os.Getenv("VITE_URL")
+			if viteURL == "" {
+				viteURL = "http://localhost:5173"
+			}
 			viteFragment, err = vite.HTMLFragment(vite.Config{
 				FS:        os.DirFS("."),
 				IsDev:     true,
-				ViteURL:   "http://localhost:5173",
+				ViteURL:   viteURL,
 				ViteEntry: "/src/main.ts",
 			})
 		} else {
