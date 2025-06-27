@@ -326,10 +326,15 @@ docker run -p 8080:8080 ghcr.io/[owner]/minio-lite-admin:latest
 - ✅ TailwindCSS disk usage components with progress bars and status indicators
 - ✅ Responsive design with dark mode support for disk usage display
 - ✅ Data formatting utilities for human-readable storage values
+- ✅ Access keys API with comprehensive MinIO admin integration
+- ✅ `/api/access-keys` endpoint with type and user filtering capabilities
+- ✅ ListAccessKeysService supporting users, service accounts, and STS keys
+- ✅ Mock MinIO server with madmin-go v4 encryption support
+- ✅ Comprehensive access keys testing with table-driven test patterns
 
 **Next Steps (TODO)**:
-- Additional MinIO administrative features (disk status, access keys, replication)
-- Frontend components for MinIO management UI
+- Frontend access keys UI components and integration
+- Site replication configuration and management
 - MinIO connection health check and validation
 - Authentication and authorization system
 - More API endpoints for MinIO operations (buckets, users, policies)
@@ -522,6 +527,157 @@ When encountering test timeouts, follow this systematic debugging approach:
 
 **Architecture Evolution**:
 The project evolved from simple functional handlers to a well-structured service-based architecture while maintaining backward compatibility and improving maintainability.
+
+### MinIO Admin API Integration
+
+**Access Keys Management Implementation**:
+The project successfully integrates with MinIO's admin API for comprehensive access key management, providing unified access to users, service accounts, and STS (Security Token Service) keys.
+
+**API Architecture for Access Keys**:
+```go
+// Service layer pattern for access key management
+type ListAccessKeysService struct {
+    minioClient *madmin.AdminClient
+}
+
+// Unified response structure for all access key types
+type AccessKeyInfo struct {
+    AccessKey     string  `json:"accessKey"`
+    ParentUser    string  `json:"parentUser"`
+    AccountStatus string  `json:"accountStatus"`
+    Type          string  `json:"type"` // "user", "serviceAccount", "sts"
+    Name          string  `json:"name,omitempty"`
+    Description   string  `json:"description,omitempty"`
+    Expiration    *string `json:"expiration,omitempty"`
+    ImpliedPolicy bool    `json:"impliedPolicy"`
+}
+```
+
+**MinIO Admin API Integration Patterns**:
+- **ListUsers()**: Retrieves all system users with status information
+- **ListAccessKeysBulk()**: Bulk retrieval of access keys with filtering options
+- **Unified Data Processing**: Combines multiple API calls into single response structure
+- **Type-based Filtering**: Support for users, service accounts, and STS keys
+- **User-specific Filtering**: Retrieve access keys for specific users
+
+**HTTP API Design**:
+```
+GET /api/access-keys              # List all access keys
+GET /api/access-keys?type=users   # Filter by users only
+GET /api/access-keys?type=serviceAccounts # Filter by service accounts
+GET /api/access-keys?type=sts     # Filter by STS keys
+GET /api/access-keys?user=name    # Filter by specific user
+```
+
+**madmin-go v4 Integration Challenges and Solutions**:
+
+**Challenge 1: Response Encryption**
+- **Problem**: madmin-go v4 expects encrypted responses from admin API endpoints
+- **Solution**: Implement proper encryption in mock server using `madmin.EncryptData()`
+- **Key Learning**: All mock responses must use `application/octet-stream` content type with encrypted payloads
+
+```go
+// Mock server encryption pattern
+jsonData, _ := json.Marshal(responseData)
+encryptedData, _ := madmin.EncryptData("minioadmin", jsonData)
+w.Header().Set("Content-Type", "application/octet-stream")
+w.Write(encryptedData)
+```
+
+**Challenge 2: API Options Validation**
+- **Problem**: `madmin.ListAccessKeysOpts` has mutually exclusive options
+- **Solution**: Conditional options handling based on filtering requirements
+- **Key Learning**: `All: true` cannot be used with specific user lists
+
+```go
+// Correct options handling
+if opts.User == "" {
+    bulkOpts.All = true
+    accessKeysMap, err = s.minioClient.ListAccessKeysBulk(ctx, nil, bulkOpts)
+} else {
+    accessKeysMap, err = s.minioClient.ListAccessKeysBulk(ctx, []string{opts.User}, bulkOpts)
+}
+```
+
+**Challenge 3: Constants and Type Safety**
+- **Problem**: String literals vs madmin package constants
+- **Solution**: Always use madmin package constants for type safety
+- **Key Learning**: Constants prevent runtime errors and ensure API compatibility
+
+```go
+// Correct constant usage
+switch opts.Type {
+case "users":
+    bulkOpts.ListType = madmin.AccessKeyListUsersOnly
+case "serviceAccounts":
+    bulkOpts.ListType = madmin.AccessKeyListSvcaccOnly
+case "sts":
+    bulkOpts.ListType = madmin.AccessKeyListSTSOnly
+default:
+    bulkOpts.ListType = madmin.AccessKeyListAll
+}
+```
+
+**Testing Strategy for External API Dependencies**:
+
+**Mock Server Architecture Enhancement**:
+- **Extended Chi Router**: Added `/v4/list-users` and `/v4/list-access-keys-bulk` endpoints
+- **Configurable Responses**: Support for both success and error scenarios
+- **Encryption Support**: Full madmin-go v4 compatibility in test environment
+- **Test Scenarios**: Comprehensive test data for various MinIO configurations
+
+**Table-Driven Test Patterns**:
+```go
+tests := []struct {
+    name           string
+    method         string
+    queryParams    string
+    setupMock      func(*minio.MockMinIOServer)
+    expectedStatus int
+    expectedFields []string
+}{
+    {
+        name: "successful access keys request - all types",
+        setupMock: func(mockMinIO *minio.MockMinIOServer) {
+            scenarios := minio.TestScenarios{}
+            users, accessKeys := scenarios.SuccessfulAccessKeys()
+            mockMinIO.SetUsersResponse(users)
+            mockMinIO.SetAccessKeysBulkResponse(accessKeys)
+        },
+        expectedStatus: http.StatusOK,
+        expectedFields: []string{"accessKeys", "total"},
+    },
+}
+```
+
+**Debugging and Troubleshooting Insights**:
+
+**Systematic Debugging Approach for External API Integration**:
+1. **Verify API Endpoints**: Ensure mock endpoints match actual madmin API paths
+2. **Check Response Format**: Validate encryption, content types, and data structures
+3. **Test Options Handling**: Verify madmin options are used correctly
+4. **Isolate Components**: Test service layer separately from HTTP handlers
+5. **Use Constants**: Always prefer package constants over string literals
+
+**Performance and Error Handling**:
+- **Unified API Calls**: Combine multiple MinIO API calls into single service operation
+- **Graceful Degradation**: Handle partial failures in bulk operations
+- **Structured Error Responses**: Consistent error format across all endpoints
+- **Request Validation**: Input validation before calling expensive MinIO operations
+
+**Key Technical Learnings**:
+- **madmin-go v4 Encryption**: All admin API responses require proper encryption
+- **Options Validation**: MinIO client options have strict validation rules
+- **Mock Testing Strategy**: External API dependencies require comprehensive mocking
+- **Service Composition**: Multiple MinIO API calls can be composed into unified responses
+- **Type Safety**: Package constants prevent runtime errors and ensure compatibility
+
+**Best Practices Established**:
+- Always use madmin package constants for type safety
+- Implement proper encryption in mock servers for v4 compatibility
+- Design unified response structures for multiple data sources
+- Follow conditional options patterns for API client configuration
+- Use table-driven tests for comprehensive API endpoint coverage
 
 ### Frontend Development Workflow
 
