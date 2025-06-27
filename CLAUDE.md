@@ -22,8 +22,9 @@ The project uses `github.com/olivere/vite` for seamless integration between Go b
 
 ### Backend Architecture
 
-- **HTTP Router**: Chi router (`github.com/go-chi/chi/v5`) with middleware (Logger, Recoverer, RequestID)
+- **HTTP Router**: Chi router (`github.com/go-chi/chi/v5`) with custom zerolog middleware (Recoverer, RequestID)
 - **Configuration**: Viper-based config management with flags, environment variables, and YAML support
+- **Logging**: Zerolog structured logging with configurable levels and pretty printing
 - **Handler Structure**: Organized in `internal/handler/http` package with separation of concerns
 - **API Structure**: RESTful endpoints under `/api` prefix with structured JSON responses
 - **Integration**: Uses `github.com/olivere/vite` for HTML fragment generation and asset serving
@@ -35,10 +36,13 @@ The project uses `github.com/olivere/vite` for seamless integration between Go b
 internal/
 ├── config/          # Configuration management with Viper
 │   └── config.go    # Config structs and loading logic
+├── logger/          # Zerolog configuration and setup
+│   └── logger.go    # Logger initialization and level parsing
 └── handler/
     └── http/        # HTTP handlers
         ├── api.go   # API endpoints (health, server-info)
-        └── frontend.go # Frontend serving with Vite integration
+        ├── frontend.go # Frontend serving with Vite integration
+        └── middleware.go # Custom chi middleware (zerolog request logger)
 ```
 
 ### Configuration Management
@@ -49,10 +53,19 @@ Uses Viper for robust configuration with multiple sources (priority order):
 3. **Configuration files** (YAML)
 4. **Default values** (lowest priority)
 
+**Environment Variables**:
+- `MINIO_ADMIN_ADDR`: Server address (default: `:8080`)
+- `MINIO_ADMIN_DEV`: Development mode (default: `false`)
+- `MINIO_ADMIN_VITE_URL`: Vite dev server URL (default: `http://localhost:5173`)
+- `MINIO_ADMIN_VITE_ENTRY`: Vite entry point (default: `/src/main.ts`)
+- `MINIO_ADMIN_LOG_LEVEL`: Log level (default: `info`, options: trace, debug, info, warn, error, fatal, panic)
+- `MINIO_ADMIN_LOG_PRETTY`: Pretty log output (default: `true`)
+
 ### Handler Architecture
 
 - **API Handlers**: Type-safe JSON responses with proper error handling
 - **Frontend Handler**: Dependency injection pattern with config and embedded assets
+- **Custom Middleware**: Zerolog-based request logging with structured output (method, URI, status, elapsed time)
 - **Separation of Concerns**: Clean boundaries between routing, configuration, and business logic
 
 ### Frontend Architecture
@@ -166,8 +179,9 @@ export default defineConfig({
 
 **Completed**:
 - ✅ Hybrid Go-Vue integration with `olivere/vite`
-- ✅ Chi router with middleware (Logger, Recoverer, RequestID)
+- ✅ Chi router with custom zerolog middleware (Recoverer, RequestID)
 - ✅ Viper configuration management (flags, env vars, config files)
+- ✅ Zerolog structured logging with configurable levels and pretty printing
 - ✅ Structured HTTP handlers in `internal/handler/http`
 - ✅ Vue.js 3 + TypeScript frontend scaffold
 - ✅ Docker development environment with watch mode
@@ -195,3 +209,4 @@ This project uses AGPLv3 license due to dependency on `github.com/minio/madmin-g
 - Static assets are served by Vite dev server in development, embedded in Go binary in production
 - Build output goes to `bin/` directory (excluded from git) for verification without cleanup
 - Use `go run ./main.go -dev` for development, `go build . -o bin/minio-lite-admin` for verification
+- Use `gofmt -w .` to format all Go files before running verification tests
