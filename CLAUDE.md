@@ -130,6 +130,9 @@ docker compose up --watch
 
 # Build production Docker image
 docker build -t minio-lite-admin .
+
+# Pull latest image from GitHub Container Registry
+docker pull ghcr.io/[username]/minio-lite-admin:latest
 ```
 
 ## Key Implementation Details
@@ -201,6 +204,36 @@ export default defineConfig({
 
 **Design Tokens**: See `DESIGN_TOKENS.md` for comprehensive styling guidelines and design system documentation.
 
+### GitHub Actions CI/CD
+
+**Workflow File**: `.github/workflows/docker-publish.yml`
+
+**Features**:
+- **Triggers**: Push to `main`/`release` branches, tags (`v*`), and pull requests
+- **Multi-platform**: Builds for `linux/amd64` and `linux/arm64` architectures
+- **Registry**: Publishes to GitHub Container Registry (GHCR) at `ghcr.io/[owner]/[repo]`
+- **Caching**: Uses GitHub Actions cache for faster builds
+- **Security**: Includes build attestation for supply chain security
+- **Tagging Strategy**:
+  - Branch names for branch pushes
+  - Tag names for tag pushes  
+  - `latest` for main branch
+  - Git SHA with branch prefix for main branch
+  - PR numbers for pull requests
+
+**Required Permissions**:
+- `contents: read` - Access repository code
+- `packages: write` - Push to GitHub Container Registry
+- `attestations: write` - Generate build attestations
+- `id-token: write` - OIDC token for attestations
+
+**Usage**:
+```bash
+# Pull and run the latest image
+docker pull ghcr.io/[owner]/minio-lite-admin:latest
+docker run -p 8080:8080 ghcr.io/[owner]/minio-lite-admin:latest
+```
+
 ### Current State and Next Steps
 
 **Completed**:
@@ -221,6 +254,7 @@ export default defineConfig({
 - ✅ Docker development environment with watch mode and MinIO service
 - ✅ Production Docker build with multi-stage process
 - ✅ Development/production mode switching
+- ✅ GitHub Actions workflow for automated Docker builds and GHCR publishing
 
 **Next Steps (TODO)**:
 - Additional MinIO administrative features (disk status, access keys, replication)
