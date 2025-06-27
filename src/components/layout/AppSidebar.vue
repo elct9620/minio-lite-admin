@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 
 interface MenuItem {
   name: string
   icon: string
-  current: boolean
+  path: string
 }
 
 interface Props {
@@ -16,6 +17,8 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   'update:open': [value: boolean]
 }>()
+
+const route = useRoute()
 
 const isOpen = computed({
   get: () => props.open,
@@ -42,20 +45,21 @@ const isOpen = computed({
     
     <nav class="mt-4 px-2">
       <div class="space-y-1">
-        <a
+        <router-link
           v-for="item in menuItems"
           :key="item.name"
-          href="#"
+          :to="item.path"
           class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors"
-          :class="item.current 
+          :class="route.path === item.path
             ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200' 
             : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'"
+          @click="isOpen = false"
         >
           <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon" />
           </svg>
           {{ item.name }}
-        </a>
+        </router-link>
       </div>
     </nav>
   </div>
