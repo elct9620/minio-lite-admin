@@ -1,0 +1,75 @@
+# Git and version control
+.git
+.gitignore
+
+# Documentation
+*.md
+README*
+LICENSE
+CHANGELOG*
+
+# Development files
+.env
+.env.*
+compose.yml
+compose.yaml
+docker-compose*.yml
+docker-compose*.yaml
+
+# Development Dockerfiles
+Dockerfile.frontend
+Dockerfile.backend
+
+# Node.js
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-store
+
+# Frontend build artifacts (will be built in container)
+dist
+dist-ssr
+*.local
+
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.*
+*.coverprofile
+profile.cov
+go.work
+go.work.sum
+
+# Editor directories and files
+.vscode
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Temporary files
+.tmp
+.temp
+*.tmp
+*.temp
+
+# OS generated files
+Thumbs.db
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# Logs
+logs
+*.log
