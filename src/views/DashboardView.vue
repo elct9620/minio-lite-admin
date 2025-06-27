@@ -3,36 +3,41 @@ import ServerInfoCard from '../components/dashboard/ServerInfoCard.vue'
 import DiskUsageChart from '../components/dashboard/DiskUsageChart.vue'
 import StatisticsCard from '../components/dashboard/StatisticsCard.vue'
 import SystemHealthCard from '../components/dashboard/SystemHealthCard.vue'
+import DiskDetailsCard from '../components/dashboard/DiskDetailsCard.vue'
 import { useServerInfo } from '../composables/useServerInfo'
+import { useDataUsage } from '../composables/useDataUsage'
+import { formatBytes } from '../utils/formatBytes'
+import { computed } from 'vue'
 
 const { serverInfo, loading, error } = useServerInfo()
+const { dataUsage, loading: dataLoading } = useDataUsage()
 
-const statisticsData = [
+const statisticsData = computed(() => [
   {
     title: 'Total Buckets',
-    value: '-',
+    value: dataUsage.value?.bucketsCount?.toLocaleString() || '-',
     icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10',
     iconColor: 'text-blue-600'
   },
   {
     title: 'Total Objects',
-    value: '-',
+    value: dataUsage.value?.objectsCount?.toLocaleString() || '-',
     icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
     iconColor: 'text-green-600'
   },
   {
     title: 'Storage Used',
-    value: '-',
+    value: dataUsage.value ? formatBytes(dataUsage.value.totalUsedCapacity) : '-',
     icon: 'M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m-9 4v10a2 2 0 002 2h6a2 2 0 002-2V8M7 8h10M7 8V6a1 1 0 011-1h8a1 1 0 011 1v2',
     iconColor: 'text-yellow-600'
   },
   {
     title: 'Server Status',
-    value: 'Online',
+    value: serverInfo.value ? 'Online' : (loading.value || dataLoading.value ? 'Checking...' : 'Offline'),
     icon: 'M13 10V3L4 14h7v7l9-11h-7z',
-    iconColor: 'text-green-600'
+    iconColor: serverInfo.value ? 'text-green-600' : (loading.value || dataLoading.value ? 'text-yellow-600' : 'text-red-600')
   }
-]
+])
 </script>
 
 <template>
@@ -66,6 +71,9 @@ const statisticsData = [
     </div>
 
     <!-- System Health -->
-    <SystemHealthCard />
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <SystemHealthCard />
+      <DiskDetailsCard />
+    </div>
   </div>
 </template>
