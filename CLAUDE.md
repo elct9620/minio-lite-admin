@@ -142,6 +142,34 @@ docker build -t minio-lite-admin .
 docker pull ghcr.io/[username]/minio-lite-admin:latest
 ```
 
+### Quality Assurance
+```bash
+# Format code (required before commits)
+gofmt -w .
+
+# Run all tests with race detection and coverage
+go test -v -race -coverprofile=coverage.out ./...
+
+# Generate and view coverage report
+go tool cover -func=coverage.out
+go tool cover -html=coverage.out -o coverage.html
+
+# Run comprehensive linting (matches CI pipeline)
+golangci-lint run --timeout=5m
+
+# Test specific package
+go test -v ./internal/handler/http
+
+# Test specific function
+go test -v ./internal/handler/http -run TestService_GetServerInfoHandler
+
+# Run tests with timeout
+go test -v ./internal/handler/http -timeout 30s
+
+# Clean up test artifacts
+rm coverage.out coverage.html
+```
+
 ## Key Implementation Details
 
 ### Vite Integration Pattern
@@ -263,14 +291,22 @@ func NewService(...deps) (http.Handler, error) {
 
 ### GitHub Actions CI/CD
 
-**Workflow File**: `.github/workflows/docker-publish.yml`
+**Workflow File**: `.github/workflows/ci.yml`
+
+**Pipeline Architecture**:
+- **Test Job**: Go 1.24 with race detection, coverage reporting, and module caching
+- **Lint Job**: Code formatting validation (gofmt) and comprehensive linting (golangci-lint)
+- **Build-and-Push Job**: Docker image building and publishing (depends on test and lint passing)
 
 **Features**:
 - **Triggers**: Push to `main`/`release` branches, tags (`v*`), and pull requests
+- **Quality Gates**: All tests and linting must pass before Docker builds
 - **Multi-platform**: Builds for `linux/amd64` and `linux/arm64` architectures
 - **Registry**: Publishes to GitHub Container Registry (GHCR) at `ghcr.io/[owner]/[repo]`
-- **Caching**: Uses GitHub Actions cache for faster builds
+- **Caching**: Uses GitHub Actions cache for Go modules and Docker layers
 - **Security**: Includes build attestation for supply chain security
+- **Code Quality**: Automated gofmt checking and golangci-lint validation
+- **Test Coverage**: Comprehensive test execution with race detection
 - **Tagging Strategy**:
   - Branch names for branch pushes
   - Tag names for tag pushes  
@@ -313,7 +349,7 @@ docker run -p 8080:8080 ghcr.io/[owner]/minio-lite-admin:latest
 - ✅ Docker development environment with watch mode and MinIO service
 - ✅ Production Docker build with multi-stage process
 - ✅ Development/production mode switching
-- ✅ GitHub Actions workflow for automated Docker builds and GHCR publishing
+- ✅ Comprehensive CI/CD pipeline with test and lint validation before Docker builds
 - ✅ Graceful HTTP server shutdown with signal handling and timeout
 - ✅ Comprehensive API testing with table-driven tests and httptest
 - ✅ Mock MinIO server infrastructure with chi router for external dependency testing
@@ -331,9 +367,12 @@ docker run -p 8080:8080 ghcr.io/[owner]/minio-lite-admin:latest
 - ✅ ListAccessKeysService supporting users, service accounts, and STS keys
 - ✅ Mock MinIO server with madmin-go v4 encryption support
 - ✅ Comprehensive access keys testing with table-driven test patterns
+- ✅ Frontend access keys UI with statistics, filtering, and empty state handling
+- ✅ AccessKeyCard component for displaying individual access key information
+- ✅ useAccessKeys composable for reactive API integration with proper error handling
+- ✅ Fixed API response format to ensure consistent JSON array format (not null)
 
 **Next Steps (TODO)**:
-- Frontend access keys UI components and integration
 - Site replication configuration and management
 - MinIO connection health check and validation
 - Authentication and authorization system
@@ -343,627 +382,53 @@ docker run -p 8080:8080 ghcr.io/[owner]/minio-lite-admin:latest
 
 This project uses AGPLv3 license due to dependency on `github.com/minio/madmin-go` which is AGPLv3 licensed. Any derivative work must maintain AGPLv3 compatibility.
 
-## Working Style & Architecture Decisions
-
-This section documents key insights learned from collaborating with Aotokitsuruya and architectural decisions made during development.
-
-### Code Organization Philosophy
-
-**Clean Architecture Principles**:
-- Clear separation between domain logic (`internal/service/`) and HTTP concerns (`internal/handler/http/`)
-- Dependency injection pattern using struct-based services
-- Single responsibility principle with dedicated files per handler
-- Interface-based abstractions for testability
-
-**File Naming Conventions**:
-- Handler files follow `get_*.go` pattern for HTTP GET endpoints
-- Handler methods align with file names: `get_health.go` → `GetHealthHandler()`
-- Consistent naming improves code discoverability and maintenance
+## Architecture Decisions
 
 ### Service Architecture Pattern
-
-**Evolution from Functional to Struct-Based Handlers**:
-```go
-// Old approach (functional)
-func HealthHandler(w http.ResponseWriter, r *http.Request) { ... }
-
-// New approach (struct methods)
-type Service struct { dependencies... }
-func (s *Service) GetHealthHandler(w http.ResponseWriter, r *http.Request) { ... }
-```
-
-**Benefits Achieved**:
-- Better dependency management and injection
-- Improved testability with mockable Service struct
-- Cleaner separation of concerns
-- More maintainable object-oriented design
+- **HTTP Handlers**: Struct-based handlers with dependency injection via `Service` struct
+- **File Naming**: Handler files follow `get_*.go` pattern with matching method names
+- **Testing**: Each handler has corresponding `*_test.go` with table-driven tests
 
 ### Build System Design
+- **Development Mode**: Default mode, no build tags required, uses Vite dev server
+- **Production Mode**: `-tags dist` embeds frontend assets in Go binary
+- **Critical**: `ViteURL` must be browser-accessible for containerized environments
 
-**Conditional Asset Embedding**:
-- Development mode as default (no build tags required)
-- Production builds use `-tags dist` for embedded assets
-- Prevents build failures when `dist/` directory doesn't exist
-- Clean separation between development and production concerns
-
-**Key Files**:
-- `embed_dev.go` - Default development mode with empty embed.FS
-- `embed_dist.go` - Production mode with `//go:embed all:dist`
-- Build tags prevent conflicts and compilation errors
-
-### Frontend Integration Strategy
-
-**Hybrid Approach**:
-- Development: Vite dev server proxy for hot reloading
-- Production: Embedded static assets in Go binary
-- Single binary deployment with all assets included
-
-**Critical Design Decision**: 
-The `ViteURL` in configuration must be browser-accessible, not just server-accessible. This ensures proper asset loading in containerized environments.
+### Frontend Integration
+- **Development**: Go server proxies to Vite dev server (localhost:5173)
+- **Production**: Go serves embedded assets from `dist/` directory
+- **Template System**: HTML templates with Vite fragment injection (`{{ .Vite.Tags }}`)
 
 ### Testing Strategy
-
-The project follows Go testing best practices with comprehensive API testing:
-
-**Testing Architecture**:
-- **Pure Go Testing**: Uses standard `testing.T` without third-party frameworks
-- **Table-Driven Tests**: Structured test cases for comprehensive coverage
-- **HTTP Testing**: `httptest.ResponseRecorder` for API endpoint testing
-- **Dependency Injection**: `testService()` helper for clean test setup
-
-**Test Structure**:
-```go
-// Test helper in service_test.go
-func testService() *Service {
-    // Setup minimal dependencies for testing
-}
-
-// Table-driven tests in *_test.go files
-tests := []struct {
-    name           string
-    method         string
-    expectedStatus int
-    expectedBody   ResponseType
-}{...}
-```
-
-**Testing Patterns**:
-- `get_health_test.go` - Health endpoint testing with multiple HTTP methods
-- JSON response validation with structure checking
-- HTTP header validation (Content-Type, status codes)
-- Response format verification (field types, required fields)
-- Coverage reporting with `go test -cover`
-
-**Test File Organization**:
-- `service_test.go` - Shared test utilities and Service setup
-- `get_*_test.go` - Individual handler tests matching file naming convention
-- Test files colocated with implementation for easy discovery
-
-**Mock Infrastructure for External Dependencies**:
-- **Problem**: Testing endpoints that depend on external services (MinIO Admin API)
-- **Solution**: Create mock servers using `httptest.Server` with chi router
-- **Location**: `internal/testability/minio/` - Dedicated package for test infrastructure
-- **Pattern**: Mock servers simulate external API behavior without network dependencies
-
-**Mock MinIO Server Architecture**:
-```go
-// Chi router for clean API endpoint management
-r := chi.NewRouter()
-r.Route("/minio/admin", func(r chi.Router) {
-    r.Get("/v4/info", mock.handleServerInfo)
-    r.Get("/v3/info", mock.handleServerInfo) 
-    r.Get("/info", mock.handleServerInfo)
-})
-
-// Configurable responses for different test scenarios
-mock.SetServerInfoResponse(scenarios.SuccessfulServerInfo())
-mock.SetServerInfoError(400, "Bad Request") // Non-retryable for fast tests
-```
-
-### Verification and Quality Practices
-
-**Code Quality Workflow**:
-1. Use `gofmt -w .` for formatting verification before builds
-2. Run `go test ./...` to execute all tests with coverage reporting
-3. Use `golangci-lint` for comprehensive static code analysis
-4. Test both development and production build modes
-5. Verify functionality with actual HTTP requests
-6. Commit only after successful verification and linting
-
-**Troubleshooting Test Timeouts**:
-When encountering test timeouts, follow this systematic debugging approach:
-
-1. **Create Simple Test Cases**: Build minimal HTTP servers to isolate the issue
-2. **Test Direct HTTP**: Verify mock server responds quickly to direct HTTP requests
-3. **Check Concurrent Access**: Test multiple simultaneous requests for lock/blocking issues
-4. **Examine Client Behavior**: Investigate if external clients have retry mechanisms
-5. **Status Code Selection**: Choose appropriate HTTP status codes (non-retryable for fast tests)
-
-**Common Timeout Causes**:
-- **Client Retries**: External libraries may retry on certain HTTP status codes (503, 502, 408, 429)
-- **Lock Contention**: Shared resources causing blocking (rarely the actual cause)
-- **Network Issues**: DNS resolution or connection timeouts (use httptest to avoid)
-- **Infinite Loops**: Logic errors in mock server handlers
-
-**Quality Tools**:
-- **go test**: Standard Go testing with coverage analysis
-- **golangci-lint**: Comprehensive linting with multiple analyzers
-- **gofmt**: Code formatting and syntax verification
-- **httptest**: HTTP handler testing without external dependencies
-
-**Development Workflow**:
-1. Terminal 1: `pnpm dev` (Vite dev server)
-2. Terminal 2: `go run ./main.go -dev` (Go server in dev mode)
-3. Browser: http://localhost:8080
-
-### Lessons Learned
-
-**Effective Collaboration Patterns**:
-- Start with clear requirements and desired end state
-- Break complex refactoring into manageable steps with clear todos
-- Verify each step with actual builds and tests
-- Use consistent naming conventions for better code organization
-- Prefer explicit over implicit (build tags, naming patterns)
-
-**Technical Insights**:
-- Go build tags are powerful for conditional compilation
-- Struct-based HTTP handlers improve dependency management
-- Consistent file/method naming reduces cognitive load
-- Service pattern enables better testing and mocking
-- Single binary deployment simplifies operations
-- Table-driven tests provide comprehensive coverage with minimal code
-- httptest.ResponseRecorder enables testing without external dependencies
-- Pure Go testing is sufficient for most API testing needs
-- Test helpers (testService) reduce duplication and improve maintainability
-- golangci-lint catches issues that go compiler misses
-
-**Mock Testing and Timeout Debugging**:
-- **External client retry behavior** can cause test timeouts (madmin retries HTTP 503 errors)
-- **Systematic debugging approach**: Create simple HTTP servers to isolate issues
-- **Root cause identification**: Test timeouts usually stem from retries, not locks/blocking
-- **Status code selection matters**: Use non-retryable HTTP codes (400, 401, 404) for fast error tests
-- **Chi router in mocks**: Simplifies endpoint management vs hardcoded string matching
-- **httptest.Server performance**: Mock servers respond in microseconds, proving no infrastructure issues
-
-**Architecture Evolution**:
-The project evolved from simple functional handlers to a well-structured service-based architecture while maintaining backward compatibility and improving maintainability.
+- **Table-Driven Tests**: Standard pattern with `httptest.ResponseRecorder`
+- **Mock Infrastructure**: `internal/testability/minio/` provides mock MinIO server using chi router
+- **Test Naming**: `get_*_test.go` files match handler files with `testService()` helper
+- **External Dependencies**: Mock servers simulate MinIO Admin API with proper v4 encryption
 
 ### MinIO Admin API Integration
-
-**Access Keys Management Implementation**:
-The project successfully integrates with MinIO's admin API for comprehensive access key management, providing unified access to users, service accounts, and STS (Security Token Service) keys.
-
-**API Architecture for Access Keys**:
-```go
-// Service layer pattern for access key management
-type ListAccessKeysService struct {
-    minioClient *madmin.AdminClient
-}
-
-// Unified response structure for all access key types
-type AccessKeyInfo struct {
-    AccessKey     string  `json:"accessKey"`
-    ParentUser    string  `json:"parentUser"`
-    AccountStatus string  `json:"accountStatus"`
-    Type          string  `json:"type"` // "user", "serviceAccount", "sts"
-    Name          string  `json:"name,omitempty"`
-    Description   string  `json:"description,omitempty"`
-    Expiration    *string `json:"expiration,omitempty"`
-    ImpliedPolicy bool    `json:"impliedPolicy"`
-}
-```
-
-**MinIO Admin API Integration Patterns**:
-- **ListUsers()**: Retrieves all system users with status information
-- **ListAccessKeysBulk()**: Bulk retrieval of access keys with filtering options
-- **Unified Data Processing**: Combines multiple API calls into single response structure
-- **Type-based Filtering**: Support for users, service accounts, and STS keys
-- **User-specific Filtering**: Retrieve access keys for specific users
-
-**HTTP API Design**:
-```
-GET /api/access-keys              # List all access keys
-GET /api/access-keys?type=users   # Filter by users only
-GET /api/access-keys?type=serviceAccounts # Filter by service accounts
-GET /api/access-keys?type=sts     # Filter by STS keys
-GET /api/access-keys?user=name    # Filter by specific user
-```
-
-**madmin-go v4 Integration Challenges and Solutions**:
-
-**Challenge 1: Response Encryption**
-- **Problem**: madmin-go v4 expects encrypted responses from admin API endpoints
-- **Solution**: Implement proper encryption in mock server using `madmin.EncryptData()`
-- **Key Learning**: All mock responses must use `application/octet-stream` content type with encrypted payloads
-
-```go
-// Mock server encryption pattern
-jsonData, _ := json.Marshal(responseData)
-encryptedData, _ := madmin.EncryptData("minioadmin", jsonData)
-w.Header().Set("Content-Type", "application/octet-stream")
-w.Write(encryptedData)
-```
-
-**Challenge 2: API Options Validation**
-- **Problem**: `madmin.ListAccessKeysOpts` has mutually exclusive options
-- **Solution**: Conditional options handling based on filtering requirements
-- **Key Learning**: `All: true` cannot be used with specific user lists
-
-```go
-// Correct options handling
-if opts.User == "" {
-    bulkOpts.All = true
-    accessKeysMap, err = s.minioClient.ListAccessKeysBulk(ctx, nil, bulkOpts)
-} else {
-    accessKeysMap, err = s.minioClient.ListAccessKeysBulk(ctx, []string{opts.User}, bulkOpts)
-}
-```
-
-**Challenge 3: Constants and Type Safety**
-- **Problem**: String literals vs madmin package constants
-- **Solution**: Always use madmin package constants for type safety
-- **Key Learning**: Constants prevent runtime errors and ensure API compatibility
-
-```go
-// Correct constant usage
-switch opts.Type {
-case "users":
-    bulkOpts.ListType = madmin.AccessKeyListUsersOnly
-case "serviceAccounts":
-    bulkOpts.ListType = madmin.AccessKeyListSvcaccOnly
-case "sts":
-    bulkOpts.ListType = madmin.AccessKeyListSTSOnly
-default:
-    bulkOpts.ListType = madmin.AccessKeyListAll
-}
-```
-
-**Testing Strategy for External API Dependencies**:
-
-**Mock Server Architecture Enhancement**:
-- **Extended Chi Router**: Added `/v4/list-users` and `/v4/list-access-keys-bulk` endpoints
-- **Configurable Responses**: Support for both success and error scenarios
-- **Encryption Support**: Full madmin-go v4 compatibility in test environment
-- **Test Scenarios**: Comprehensive test data for various MinIO configurations
-
-**Table-Driven Test Patterns**:
-```go
-tests := []struct {
-    name           string
-    method         string
-    queryParams    string
-    setupMock      func(*minio.MockMinIOServer)
-    expectedStatus int
-    expectedFields []string
-}{
-    {
-        name: "successful access keys request - all types",
-        setupMock: func(mockMinIO *minio.MockMinIOServer) {
-            scenarios := minio.TestScenarios{}
-            users, accessKeys := scenarios.SuccessfulAccessKeys()
-            mockMinIO.SetUsersResponse(users)
-            mockMinIO.SetAccessKeysBulkResponse(accessKeys)
-        },
-        expectedStatus: http.StatusOK,
-        expectedFields: []string{"accessKeys", "total"},
-    },
-}
-```
-
-**Debugging and Troubleshooting Insights**:
-
-**Systematic Debugging Approach for External API Integration**:
-1. **Verify API Endpoints**: Ensure mock endpoints match actual madmin API paths
-2. **Check Response Format**: Validate encryption, content types, and data structures
-3. **Test Options Handling**: Verify madmin options are used correctly
-4. **Isolate Components**: Test service layer separately from HTTP handlers
-5. **Use Constants**: Always prefer package constants over string literals
-
-**Performance and Error Handling**:
-- **Unified API Calls**: Combine multiple MinIO API calls into single service operation
-- **Graceful Degradation**: Handle partial failures in bulk operations
-- **Structured Error Responses**: Consistent error format across all endpoints
-- **Request Validation**: Input validation before calling expensive MinIO operations
-
-**Key Technical Learnings**:
-- **madmin-go v4 Encryption**: All admin API responses require proper encryption
-- **Options Validation**: MinIO client options have strict validation rules
-- **Mock Testing Strategy**: External API dependencies require comprehensive mocking
-- **Service Composition**: Multiple MinIO API calls can be composed into unified responses
-- **Type Safety**: Package constants prevent runtime errors and ensure compatibility
-
-**Best Practices Established**:
-- Always use madmin package constants for type safety
-- Implement proper encryption in mock servers for v4 compatibility
-- Design unified response structures for multiple data sources
-- Follow conditional options patterns for API client configuration
+- **Access Keys API**: Unified interface for users, service accounts, and STS keys via `ListAccessKeysBulk()`
+- **madmin-go v4**: Requires encrypted responses in mock servers using `madmin.EncryptData()`
+- **API Options**: Mutually exclusive options require conditional handling (`All: true` vs specific users)
+- **Constants**: Always use madmin package constants (e.g., `madmin.AccessKeyListUsersOnly`) for type safety
 
 ### API Response Format and Frontend Integration
 
-**Critical Bug: Null vs Empty Array in JSON Responses**
+**Critical Issue: JSON Array Handling**
+- **Problem**: Go `nil` slices serialize to `null`, causing frontend iteration errors
+- **Solution**: Always initialize slices to `[]` before JSON marshaling
+- **Detection**: Test API endpoints with `curl` before debugging frontend
 
-**Problem Identified**:
-During access keys frontend implementation, discovered that Go's JSON marshalling returns `null` for nil slices, causing frontend infinite loading states when no data exists.
-
-```go
-// Problematic - results in {"accessKeys": null, "total": 0}
-var allAccessKeys []AccessKeyInfo
-return &ListAccessKeysResponse{
-    AccessKeys: allAccessKeys, // nil slice marshals to null
-    Total:      len(allAccessKeys),
-}
-```
-
-**Root Cause Analysis**:
-1. **Backend**: Go's `json.Marshal()` converts `nil` slices to `null` in JSON
-2. **Frontend**: JavaScript cannot iterate over `null`, causing errors in Vue reactive systems
-3. **Symptom**: Loading state persists indefinitely, no error messages displayed
-4. **Detection**: Direct API testing with `curl` revealed `{"accessKeys": null}` response
-
-**Solution Implemented**:
-```go
-// Ensure accessKeys is never nil for JSON serialization
-if allAccessKeys == nil {
-    allAccessKeys = []AccessKeyInfo{}
-}
-
-return &ListAccessKeysResponse{
-    AccessKeys: allAccessKeys, // Empty slice marshals to []
-    Total:      len(allAccessKeys),
-}
-```
-
-**Key Technical Insights**:
-- **Go JSON Behavior**: `nil` slices serialize to `null`, empty slices serialize to `[]`
-- **Frontend Expectations**: JavaScript expects arrays for iteration, not `null` values
-- **API Design**: Always return consistent data types, prefer empty arrays over `null`
-- **Debugging Strategy**: Test API endpoints directly before investigating frontend code
-
-**Frontend Integration Patterns**:
-
-**Vue 3 Composables Architecture**:
-```typescript
-// useAccessKeys.ts - Reactive API integration
-export function useAccessKeys() {
-  const accessKeys = ref<AccessKeyInfo[]>([])
-  const loading = ref(false)
-  const error = ref<string | null>(null)
-  
-  const fetchAccessKeys = async (options: AccessKeysOptions = {}) => {
-    loading.value = true
-    try {
-      const response = await fetch(url)
-      const data: AccessKeysResponse = await response.json()
-      accessKeys.value = data.accessKeys // Now guaranteed to be []
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Unknown error'
-      accessKeys.value = [] // Ensure array type consistency
-    } finally {
-      loading.value = false // Always executes
-    }
-  }
-  
-  return { accessKeys, loading, error, fetchAccessKeys }
-}
-```
-
-**Component Architecture Best Practices**:
-```vue
-<!-- Proper loading state handling -->
-<template>
-  <div v-if="loading">Loading...</div>
-  <div v-else-if="error">{{ error }}</div>
-  <div v-else-if="accessKeys.length > 0">
-    <!-- Display data -->
-  </div>
-  <div v-else>
-    <!-- Empty state - only shows when accessKeys is [] -->
-    No access keys found
-  </div>
-</template>
-```
-
-**API Testing and Validation Strategy**:
-
-**Debugging Infinite Loading States**:
-1. **Direct API Testing**: Use `curl` to test endpoints before debugging frontend
-2. **Response Format Validation**: Verify JSON structure matches frontend expectations
-3. **Network Tab Analysis**: Check browser dev tools for actual API responses
-4. **Console Logging**: Add temporary logs in composables to trace execution flow
-5. **Type Safety**: Ensure TypeScript interfaces match actual API responses
-
-**Command-Line Debugging Pattern**:
-```bash
-# Test API endpoint directly
-curl -s http://localhost:8080/api/access-keys | jq .
-
-# Expected correct response:
-# {"accessKeys": [], "total": 0}
-
-# Previous problematic response:
-# {"accessKeys": null, "total": 0}
-```
-
-**Integration Testing Best Practices**:
-- **End-to-End Flow**: Test from API through frontend rendering
-- **Empty State Testing**: Specifically test scenarios with no data
-- **Error State Testing**: Verify error handling for API failures
-- **Loading State Testing**: Ensure loading indicators appear and disappear correctly
-
-**Lessons Learned from Access Keys Implementation**:
-
-**Go Backend Considerations**:
-- Always initialize slices to empty rather than leaving as `nil`
-- Use consistent JSON response structures across all endpoints
-- Implement proper error handling that doesn't break frontend expectations
-- Test API responses with actual HTTP clients, not just unit tests
-
-**Vue.js Frontend Patterns**:
-- Use composables for reusable API integration logic
-- Implement comprehensive loading, error, and empty states
-- Prefer reactive refs over reactive objects for simple state management
-- Structure components with clear conditional rendering logic
-
-**Development Workflow Improvements**:
-- Test API endpoints with `curl` before implementing frontend features
-- Use browser network tab to debug actual HTTP responses
-- Implement proper TypeScript interfaces that match API responses exactly
-- Add proper error boundaries and fallback states in UI components
-
-**Architecture Decision Records**:
-- **API Response Format**: Always return arrays as `[]`, never `null`
-- **Frontend State Management**: Use Vue 3 Composition API with reactive refs
-- **Error Handling**: Consistent error response format across all endpoints
-- **Testing Strategy**: Direct API testing before frontend integration
-- Use table-driven tests for comprehensive API endpoint coverage
-
-### Frontend Development Workflow
-
-**Progressive Enhancement Pattern**:
-- Start with placeholder UI components showing static content
-- Implement composables for API integration with proper error handling
-- Replace static content with real data from backend APIs
-- Add loading states, error messages, and user feedback
-- Enhance with responsive design and dark mode support
-
-**Vue.js Composition API Patterns**:
-```typescript
-// Composable pattern for API integration
-export function useDataUsage() {
-  const dataUsage = ref<DataUsage | null>(null)
-  const loading = ref(false)
-  const error = ref<string | null>(null)
-
-  const fetchDataUsage = async () => {
-    loading.value = true
-    error.value = null
-    try {
-      const response = await fetch('/api/data-usage')
-      if (!response.ok) throw new Error(`HTTP ${response.status}`)
-      dataUsage.value = await response.json()
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Unknown error'
-    } finally {
-      loading.value = false
-    }
-  }
-
-  return { dataUsage, loading, error, fetchDataUsage }
-}
-```
-
-**Component Architecture Principles**:
-- **Single Responsibility**: Each component has one clear purpose
-- **Composability**: Reusable components that can be combined
-- **Props Interface**: Clear TypeScript interfaces for component props
-- **Reactive State**: Vue 3 reactivity for dynamic data updates
-- **Error Boundaries**: Graceful error handling with fallback UI
-
-**TailwindCSS Integration Patterns**:
-```vue
-<!-- Responsive design with dark mode support -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-  <div class="bg-white dark:bg-gray-800 rounded-lg p-6">
-    <div class="text-gray-900 dark:text-white">
-      <!-- Content with proper contrast -->
-    </div>
-  </div>
-</div>
-```
-
-**Data Formatting and Utilities**:
-- **Utility Functions**: Centralized formatting for bytes, percentages, numbers
-- **Type Safety**: TypeScript interfaces for all API responses
-- **Computed Properties**: Reactive data transformations in Vue components
-- **Internationalization Ready**: Number formatting with locale support
-
-**API Integration Strategy**:
-- **Composable Pattern**: Reusable API logic in composables
-- **Error Handling**: Comprehensive error states and user feedback
-- **Loading States**: Spinner components and skeleton loading
-- **Data Transformation**: Backend data adapted to frontend needs
-- **Caching Strategy**: Reactive data stores for efficient updates
-
-**Development Workflow Insights**:
-1. **Frontend-Backend Coordination**: Ensure API contracts match frontend expectations
-2. **Incremental Development**: Build features step by step with frequent commits
-3. **Real-Time Integration**: Connect frontend to live backend APIs early
-4. **Component Testing**: Verify UI components with actual data flows
-5. **Responsive Design**: Test across different screen sizes and themes
-
-**Vue.js Best Practices Learned**:
-- **Composition API**: Superior to Options API for complex logic
-- **`<script setup>`**: Cleaner syntax for component setup
-- **Computed Properties**: For reactive data transformations
-- **Watchers**: For side effects and API calls on data changes
-- **Lifecycle Hooks**: Proper component initialization with `onMounted`
-
-**Frontend Architecture Benefits**:
-- **Modularity**: Composables enable code reuse across components
-- **Maintainability**: Clear separation between UI and business logic
-- **Testability**: Pure functions in utilities and composables
-- **Performance**: Vue 3 reactivity system optimizes re-renders
-- **Developer Experience**: TypeScript and Vite provide excellent DX
-
-**Integration with Backend Services**:
-- **API Endpoints**: RESTful endpoints with consistent JSON responses
-- **Error Standardization**: Backend errors properly handled in frontend
-- **Data Contracts**: TypeScript interfaces ensure type safety
-- **Development Mode**: Hot reloading with backend changes
-- **Production Builds**: Optimized bundles embedded in Go binary
-
-### SPA Routing Support
-
-**Backend Route Handling for Client-Side Routing**:
-The backend properly supports Vue Router client-side navigation by serving the SPA index.html for all non-API, non-static-asset requests:
-
-```go
-// Backend routing pattern
-router.Route("/api", func(r chi.Router) {
-    // All API endpoints under /api prefix
-    r.Get("/health", svc.GetHealthHandler)
-    r.Get("/server-info", svc.GetServerInfoHandler)
-    r.Get("/data-usage", svc.GetDataUsageHandler)
-})
-
-// Catch-all for frontend routes - serves SPA index.html
-router.Get("/*", svc.GetRootHandler)
-```
-
-**Static Asset vs SPA Route Detection**:
-```go
-func (s *Service) isStaticAsset(path string) bool {
-    // Detects file extensions for static assets (.js, .css, .png, etc.)
-    // Returns false for paths like /dashboard, /access-keys (SPA routes)
-    // Returns true for paths like /assets/main.js, /favicon.ico
-}
-```
-
-**Route Handling Logic**:
-- **API Routes** (`/api/*`): Handled by API handlers with JSON responses
-- **Static Assets** (`*.js`, `*.css`, `*.png`, etc.): Served from filesystem/embedded assets
-- **SPA Routes** (`/`, `/dashboard`, `/access-keys`, `/site-replication`): Served index.html for Vue Router
-
-**Benefits**:
-- **Direct URL Access**: Users can navigate directly to `/dashboard` or `/access-keys`
-- **Browser Back/Forward**: Full browser history support
-- **Refresh Support**: Page refreshes work correctly on any route
-- **SEO Ready**: Proper URL structure for potential SSR implementation
-- **Clean Separation**: Clear distinction between API and frontend concerns
+**Vue 3 Integration Patterns**
+- **Composables**: Reusable API logic with reactive refs for loading, error, and data states
+- **Component Architecture**: `<script setup>` with TypeScript, proper loading/error/empty states
+- **SPA Routing**: Backend serves `index.html` for non-API routes using `isStaticAsset()` detection
 
 ## Development Notes
 
-- The project requires Go 1.24+ and Node.js for development
-- Frontend assets must be built (`pnpm build`) before production deployment
-- The `dist/.keep` file ensures the dist directory exists for Go embed
-- API endpoints are structured under `/api` prefix for clear separation
-- Static assets are served by Vite dev server in development, embedded in Go binary in production
-- Build output goes to `bin/` directory (excluded from git) for verification without cleanup
-- Use `go run ./main.go -dev` for development, `go build . -o bin/minio-lite-admin` for verification
-- Use `gofmt -w .` to format all Go files before running verification tests
-- Run `go test ./...` to execute all tests
-- Run `go test ./... -cover` to execute all tests with coverage analysis
-- Use `golangci-lint run` for comprehensive static code analysis and linting
-- Test specific endpoints: `go test -v ./internal/handler/http -run TestService_GetServerInfoHandler`
-- Run tests with timeout limits: `go test -v ./internal/handler/http -timeout 30s`
-- Generate detailed coverage report: `go test ./internal/handler/http -coverprofile=coverage.out && go tool cover -func=coverage.out`
+**Requirements**: Go 1.24+ and Node.js
+
+**Key Patterns**:
+- API endpoints under `/api` prefix, frontend routes served via SPA fallback
+- Development: Vite dev server, Production: embedded assets with `-tags dist`
+- All slice responses must be initialized to `[]` (not `nil`) for JSON compatibility
+- Mock servers require madmin v4 encryption for MinIO Admin API testing
