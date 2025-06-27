@@ -8,8 +8,6 @@ import (
 	"github.com/elct9620/minio-lite-admin/internal/infra"
 	"github.com/elct9620/minio-lite-admin/internal/logger"
 	"github.com/elct9620/minio-lite-admin/internal/service"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 )
 
 func main() {
@@ -36,23 +34,13 @@ func main() {
 	// Initialize services
 	getServerInfoService := service.NewGetServerInfoService(minioClient)
 
-	// Set up Chi router
-	r := chi.NewRouter()
-
-	// Add middleware
-	r.Use(httpHandler.Logger(log))
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.RequestID)
-
-	// API routes
-	r.Route("/api", func(r chi.Router) {
-		r.Get("/health", httpHandler.HealthHandler)
-		r.Get("/server-info", httpHandler.ServerInfoHandler(getServerInfoService))
+	// Set up router with dependencies
+	r := httpHandler.NewRouter(httpHandler.RouterDependencies{
+		Config:               cfg,
+		Logger:               log,
+		GetServerInfoService: getServerInfoService,
+		DistFS:               distFS,
 	})
-
-	// Frontend handler
-	frontendHandler := httpHandler.NewFrontendHandler(cfg, distFS)
-	r.Get("/*", frontendHandler.ServeHTTP)
 
 	// Start server
 	log.Info().Str("addr", cfg.Server.Addr).Msg("Server starting")

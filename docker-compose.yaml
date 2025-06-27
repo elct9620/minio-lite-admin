@@ -62,6 +62,7 @@ services:
         - action: rebuild
           path: ./
           ignore:
+            - bin/
             - node_modules/
             - dist/
             - .git/
