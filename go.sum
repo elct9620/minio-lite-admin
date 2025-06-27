@@ -1,2 +1,4 @@
+github.com/go-chi/chi/v5 v5.2.2 h1:CMwsvRVTbXVytCk1Wd72Zy1LAsAh9GxMmSNWLHCG618=
+github.com/go-chi/chi/v5 v5.2.2/go.mod h1:L2yAIGWB3H+phAw1NxKwWM+7eUH/lU8pOMm5hHcoops=
 github.com/olivere/vite v0.1.0 h1:Wi5zTtS3BbnOrfG+oRT7KZOI9lp48gRv59VptSBmPO4=
 github.com/olivere/vite v0.1.0/go.mod h1:ef1SWmGSWAYJxSuY2Bu90YLQ7hUBxYmejIVuFGsIIe8=

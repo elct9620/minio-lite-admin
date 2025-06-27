@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/olivere/vite"
 )
 
@@ -37,15 +39,22 @@ func main() {
 	)
 	flag.Parse()
 
-	// Set up routes
-	mux := http.NewServeMux()
+	// Set up Chi router
+	r := chi.NewRouter()
+
+	// Add middleware
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.RequestID)
 
 	// API routes
-	mux.HandleFunc("/api/health", healthHandler)
-	mux.HandleFunc("/api/server-info", serverInfoHandler)
+	r.Route("/api", func(r chi.Router) {
+		r.Get("/health", healthHandler)
+		r.Get("/server-info", serverInfoHandler)
+	})
 
 	// Serve frontend
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/*", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" && r.URL.Path != "/index.html" {
 			// Serve static assets
 			if *isDev {
@@ -115,7 +124,7 @@ func main() {
 		log.Println("Running in production mode")
 	}
 
-	if err := http.ListenAndServe(*addr, mux); err != nil {
+	if err := http.ListenAndServe(*addr, r); err != nil {
 		log.Fatal(err)
 	}
 }
