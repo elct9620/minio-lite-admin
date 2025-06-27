@@ -1,7 +1,6 @@
 package main
 
 import (
-	"embed"
 	"net/http"
 
 	"github.com/elct9620/minio-lite-admin/internal/config"
@@ -12,9 +11,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
-
-//go:embed all:dist
-var distFS embed.FS
 
 func main() {
 	// Load configuration

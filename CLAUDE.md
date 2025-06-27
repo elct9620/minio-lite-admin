@@ -29,6 +29,7 @@ The project uses `github.com/olivere/vite` for seamless integration between Go b
 - **API Structure**: RESTful endpoints under `/api` prefix with structured JSON responses
 - **Integration**: Uses `github.com/olivere/vite` for HTML fragment generation and asset serving
 - **Deployment**: Single binary with embedded frontend assets
+- **Build Tags**: Conditional compilation using `dist` tag for production builds (development mode is default)
 
 ### Project Structure
 
@@ -104,18 +105,22 @@ pnpm preview
 
 ### Backend Development
 ```bash
-# Development mode (preferred for development)
+# Development mode (default, no embedded assets required)
 go run ./main.go -dev
 
-# Production mode (serves embedded assets)
-go run ./main.go
+# Production mode with embedded assets
+go run -tags dist ./main.go
 
-# Custom port
-go run ./main.go -addr :3000
+# Custom port (development mode)
+go run ./main.go -dev -addr :3000
 
-# Build binary for verification (outputs to bin/)
-go build . -o bin/minio-lite-admin
+# Build binary for verification (development mode, outputs to bin/)
+go build -o bin/minio-lite-admin .
 ./bin/minio-lite-admin -dev
+
+# Build binary with embedded assets (production mode)
+go build -tags dist -o bin/minio-lite-admin .
+./bin/minio-lite-admin
 ```
 
 ### Full Development Workflow
@@ -172,6 +177,24 @@ viteFragment, err := vite.HTMLFragment(vite.Config{
 In Docker development:
 - Use `VITE_URL=http://localhost:5173` (browser-accessible)
 - NOT `http://frontend:5173` (only accessible inside Docker network)
+
+### Build Tags System
+
+The project uses Go build tags to conditionally compile embedded assets:
+
+**Development Mode (Default)**:
+- File: `embed_dev.go` with `//go:build !dist` tag
+- Contains empty `embed.FS` variable
+- No `dist/` directory required for compilation
+- Command: `go run ./main.go -dev`
+
+**Production Mode**:
+- File: `embed_dist.go` with `//go:build dist` tag  
+- Contains `//go:embed all:dist` directive
+- Requires `dist/` directory with built frontend assets
+- Command: `go run -tags dist ./main.go`
+
+This approach prevents build failures when the `dist/` directory doesn't exist during development.
 
 ### Build Configuration
 

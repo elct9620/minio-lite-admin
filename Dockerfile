@@ -39,7 +39,7 @@ COPY *.go ./
 COPY --from=frontend-builder /app/dist ./dist/
 
 # Build Go binary with embedded assets
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
+RUN CGO_ENABLED=0 GOOS=linux go build -tags dist -o main .
 
 # Stage 3: Final production image
 FROM alpine:latest
