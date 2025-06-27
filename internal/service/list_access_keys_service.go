@@ -56,16 +56,7 @@ func (s *ListAccessKeysService) Execute(ctx context.Context, opts ListAccessKeys
 		return nil, fmt.Errorf("failed to list users: %w", err)
 	}
 
-	// Extract user names
-	var userNames []string
-	for userName := range users {
-		userNames = append(userNames, userName)
-	}
-
-	// If filtering by specific user, only include that user
-	if opts.User != "" {
-		userNames = []string{opts.User}
-	}
+	// Note: We don't need to extract userNames as we use ListAccessKeysBulk with opts.User directly
 
 	// Use ListAccessKeysBulk to get all access keys for users
 	bulkOpts := madmin.ListAccessKeysOpts{}

@@ -2,8 +2,8 @@ package config
 
 import (
 	"flag"
-	"log"
 
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )
 
@@ -64,15 +64,33 @@ func Load() *Config {
 	viper.AutomaticEnv()
 
 	// Bind environment variables
-	viper.BindEnv("server.addr", "ADDR")
-	viper.BindEnv("server.dev", "DEV")
-	viper.BindEnv("vite.url", "VITE_URL")
-	viper.BindEnv("vite.entry", "VITE_ENTRY")
-	viper.BindEnv("logger.level", "LOG_LEVEL")
-	viper.BindEnv("logger.pretty", "LOG_PRETTY")
-	viper.BindEnv("minio.url", "MINIO_URL")
-	viper.BindEnv("minio.root_user", "MINIO_ROOT_USER")
-	viper.BindEnv("minio.password", "MINIO_ROOT_PASSWORD")
+	if err := viper.BindEnv("server.addr", "ADDR"); err != nil {
+		log.Fatal().Err(err).Msg("Failed to bind server.addr environment variable")
+	}
+	if err := viper.BindEnv("server.dev", "DEV"); err != nil {
+		log.Fatal().Err(err).Msg("Failed to bind server.dev environment variable")
+	}
+	if err := viper.BindEnv("vite.url", "VITE_URL"); err != nil {
+		log.Fatal().Err(err).Msg("Failed to bind vite.url environment variable")
+	}
+	if err := viper.BindEnv("vite.entry", "VITE_ENTRY"); err != nil {
+		log.Fatal().Err(err).Msg("Failed to bind vite.entry environment variable")
+	}
+	if err := viper.BindEnv("logger.level", "LOG_LEVEL"); err != nil {
+		log.Fatal().Err(err).Msg("Failed to bind logger.level environment variable")
+	}
+	if err := viper.BindEnv("logger.pretty", "LOG_PRETTY"); err != nil {
+		log.Fatal().Err(err).Msg("Failed to bind logger.pretty environment variable")
+	}
+	if err := viper.BindEnv("minio.url", "MINIO_URL"); err != nil {
+		log.Fatal().Err(err).Msg("Failed to bind minio.url environment variable")
+	}
+	if err := viper.BindEnv("minio.root_user", "MINIO_ROOT_USER"); err != nil {
+		log.Fatal().Err(err).Msg("Failed to bind minio.root_user environment variable")
+	}
+	if err := viper.BindEnv("minio.password", "MINIO_ROOT_PASSWORD"); err != nil {
+		log.Fatal().Err(err).Msg("Failed to bind minio.password environment variable")
+	}
 
 	// Parse command line flags
 	addr := flag.String("addr", viper.GetString("server.addr"), "HTTP server address")
@@ -90,14 +108,14 @@ func Load() *Config {
 	// Try to read config file (optional)
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			log.Printf("Error reading config file: %v", err)
+			log.Warn().Err(err).Msg("Error reading config file")
 		}
 	}
 
 	// Unmarshal configuration
 	var cfg Config
 	if err := viper.Unmarshal(&cfg); err != nil {
-		log.Fatalf("Unable to decode configuration: %v", err)
+		log.Fatal().Err(err).Msg("Unable to decode configuration")
 	}
 
 	return &cfg

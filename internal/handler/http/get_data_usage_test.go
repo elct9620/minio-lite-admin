@@ -176,10 +176,9 @@ func TestService_GetDataUsageHandler_ResponseFormat(t *testing.T) {
 		return
 	}
 
-	// Check numeric fields are reasonable (non-negative)
-	if response.TotalCapacity < 0 {
-		t.Error("GetDataUsageHandler() totalCapacity should be non-negative")
-	}
+	// Check numeric fields are reasonable (TotalCapacity is uint64, so always >= 0)
+	// Just check it's a valid value by ensuring the field exists
+	_ = response.TotalCapacity
 
 	if response.UsagePercentage < 0 || response.UsagePercentage > 100 {
 		t.Errorf("GetDataUsageHandler() usagePercentage should be 0-100, got: %f", response.UsagePercentage)
@@ -190,8 +189,8 @@ func TestService_GetDataUsageHandler_ResponseFormat(t *testing.T) {
 	}
 
 	// Check that diskDetails is present and properly structured
-	if len(response.DiskDetails) < 0 {
-		t.Error("GetDataUsageHandler() diskDetails should be an array")
+	if response.DiskDetails == nil {
+		t.Error("GetDataUsageHandler() diskDetails should be an array, not nil")
 	}
 }
 

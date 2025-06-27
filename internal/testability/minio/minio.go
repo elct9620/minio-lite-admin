@@ -298,7 +298,10 @@ func (m *MockMinIOServer) handleListUsers(w http.ResponseWriter, r *http.Request
 	}
 
 	w.Header().Set("Content-Type", "application/octet-stream")
-	w.Write(encryptedData)
+	if _, err := w.Write(encryptedData); err != nil {
+		http.Error(w, "Failed to write response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // handleListAccessKeysBulk handles the MinIO admin bulk access keys endpoint
@@ -359,7 +362,10 @@ func (m *MockMinIOServer) handleListAccessKeysBulk(w http.ResponseWriter, r *htt
 	}
 
 	w.Header().Set("Content-Type", "application/octet-stream")
-	w.Write(encryptedData)
+	if _, err := w.Write(encryptedData); err != nil {
+		http.Error(w, "Failed to write response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // Test scenarios for access keys

@@ -26,7 +26,10 @@ func NewMinIOClient(cfg MinIOConfig) (*madmin.AdminClient, error) {
 	useSSL := endpoint.Scheme == "https"
 	host := endpoint.Host
 
-	client, err := madmin.New(host, cfg.RootUser, cfg.Password, useSSL)
+	client, err := madmin.NewWithOptions(host, &madmin.Options{
+		Creds:  credentials.NewStaticV4(cfg.RootUser, cfg.Password, ""),
+		Secure: useSSL,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create MinIO admin client: %w", err)
 	}

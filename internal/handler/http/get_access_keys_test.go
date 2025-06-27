@@ -260,8 +260,8 @@ func TestService_GetAccessKeysHandler_ResponseFormat(t *testing.T) {
 	}
 
 	// Check that accessKeys is present and properly structured
-	if len(response.AccessKeys) < 0 {
-		t.Error("GetAccessKeysHandler() accessKeys should be an array")
+	if response.AccessKeys == nil {
+		t.Error("GetAccessKeysHandler() accessKeys should be an array, not nil")
 	}
 
 	// Check that we have some access keys in the test scenario

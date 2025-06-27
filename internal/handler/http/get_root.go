@@ -77,6 +77,10 @@ func (s *Service) serveIndex(w http.ResponseWriter, r *http.Request) {
 			FS:    sub,
 			IsDev: false,
 		})
+		if err != nil {
+			http.Error(w, "Error creating Vite fragment", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	if err != nil {
