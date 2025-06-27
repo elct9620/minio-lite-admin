@@ -314,6 +314,9 @@ docker run -p 8080:8080 ghcr.io/[owner]/minio-lite-admin:latest
 - ✅ Production Docker build with multi-stage process
 - ✅ Development/production mode switching
 - ✅ GitHub Actions workflow for automated Docker builds and GHCR publishing
+- ✅ Graceful HTTP server shutdown with signal handling and timeout
+- ✅ Comprehensive API testing with table-driven tests and httptest
+- ✅ Code quality tools integration (go test, golangci-lint, gofmt)
 
 **Next Steps (TODO)**:
 - Additional MinIO administrative features (disk status, access keys, replication)
@@ -384,13 +387,59 @@ func (s *Service) GetHealthHandler(w http.ResponseWriter, r *http.Request) { ...
 **Critical Design Decision**: 
 The `ViteURL` in configuration must be browser-accessible, not just server-accessible. This ensures proper asset loading in containerized environments.
 
+### Testing Strategy
+
+The project follows Go testing best practices with comprehensive API testing:
+
+**Testing Architecture**:
+- **Pure Go Testing**: Uses standard `testing.T` without third-party frameworks
+- **Table-Driven Tests**: Structured test cases for comprehensive coverage
+- **HTTP Testing**: `httptest.ResponseRecorder` for API endpoint testing
+- **Dependency Injection**: `testService()` helper for clean test setup
+
+**Test Structure**:
+```go
+// Test helper in service_test.go
+func testService() *Service {
+    // Setup minimal dependencies for testing
+}
+
+// Table-driven tests in *_test.go files
+tests := []struct {
+    name           string
+    method         string
+    expectedStatus int
+    expectedBody   ResponseType
+}{...}
+```
+
+**Testing Patterns**:
+- `get_health_test.go` - Health endpoint testing with multiple HTTP methods
+- JSON response validation with structure checking
+- HTTP header validation (Content-Type, status codes)
+- Response format verification (field types, required fields)
+- Coverage reporting with `go test -cover`
+
+**Test File Organization**:
+- `service_test.go` - Shared test utilities and Service setup
+- `get_*_test.go` - Individual handler tests matching file naming convention
+- Test files colocated with implementation for easy discovery
+
 ### Verification and Quality Practices
 
 **Code Quality Workflow**:
 1. Use `gofmt -w .` for formatting verification before builds
-2. Test both development and production build modes
-3. Verify functionality with actual HTTP requests
-4. Commit only after successful verification
+2. Run `go test ./...` to execute all tests with coverage reporting
+3. Use `golangci-lint` for comprehensive static code analysis
+4. Test both development and production build modes
+5. Verify functionality with actual HTTP requests
+6. Commit only after successful verification and linting
+
+**Quality Tools**:
+- **go test**: Standard Go testing with coverage analysis
+- **golangci-lint**: Comprehensive linting with multiple analyzers
+- **gofmt**: Code formatting and syntax verification
+- **httptest**: HTTP handler testing without external dependencies
 
 **Development Workflow**:
 1. Terminal 1: `pnpm dev` (Vite dev server)
@@ -412,6 +461,11 @@ The `ViteURL` in configuration must be browser-accessible, not just server-acces
 - Consistent file/method naming reduces cognitive load
 - Service pattern enables better testing and mocking
 - Single binary deployment simplifies operations
+- Table-driven tests provide comprehensive coverage with minimal code
+- httptest.ResponseRecorder enables testing without external dependencies
+- Pure Go testing is sufficient for most API testing needs
+- Test helpers (testService) reduce duplication and improve maintainability
+- golangci-lint catches issues that go compiler misses
 
 **Architecture Evolution**:
 The project evolved from simple functional handlers to a well-structured service-based architecture while maintaining backward compatibility and improving maintainability.
@@ -426,3 +480,5 @@ The project evolved from simple functional handlers to a well-structured service
 - Build output goes to `bin/` directory (excluded from git) for verification without cleanup
 - Use `go run ./main.go -dev` for development, `go build . -o bin/minio-lite-admin` for verification
 - Use `gofmt -w .` to format all Go files before running verification tests
+- Run `go test ./...` to execute all tests with coverage: `go test ./... -cover`
+- Use `golangci-lint run` for comprehensive static code analysis and linting
