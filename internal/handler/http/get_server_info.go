@@ -31,9 +31,9 @@ func (s *Service) GetServerInfoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := ServerInfoResponse{
-		Mode:         info.Mode,
-		Region:       info.Region,
-		DeploymentID: info.DeploymentID,
+		Mode:         info.ServerInfo.Mode,
+		Region:       info.ServerInfo.Region,
+		DeploymentID: info.ServerInfo.DeploymentID,
 	}
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {

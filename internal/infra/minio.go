@@ -7,8 +7,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/minio/madmin-go/v4"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 type MinIOConfig struct {
@@ -49,7 +49,7 @@ func NewMinIOClientWithTimeout(cfg MinIOConfig, timeout time.Duration) (*madmin.
 		Dial: (&net.Dialer{
 			Timeout: timeout,
 		}).Dial,
-		TLSHandshakeTimeout: timeout,
+		TLSHandshakeTimeout:   timeout,
 		ResponseHeaderTimeout: timeout,
 	}
 

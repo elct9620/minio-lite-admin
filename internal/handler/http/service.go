@@ -44,6 +44,7 @@ func NewService(
 	router.Route("/api", func(r chi.Router) {
 		r.Get("/health", svc.GetHealthHandler)
 		r.Get("/server-info", svc.GetServerInfoHandler)
+		r.Get("/data-usage", svc.GetDataUsageHandler)
 	})
 
 	// Frontend routes

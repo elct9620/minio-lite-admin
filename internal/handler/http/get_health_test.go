@@ -62,7 +62,7 @@ func TestService_GetHealthHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create request
 			req := httptest.NewRequest(tt.method, "/api/health", nil)
-			
+
 			// Create response recorder
 			w := httptest.NewRecorder()
 
@@ -102,7 +102,7 @@ func TestService_GetHealthHandler(t *testing.T) {
 func TestService_GetHealthHandler_ResponseFormat(t *testing.T) {
 	// Test to ensure response is valid JSON and has correct structure
 	svc := testService()
-	
+
 	req := httptest.NewRequest(http.MethodGet, "/api/health", nil)
 	w := httptest.NewRecorder()
 
@@ -136,7 +136,7 @@ func TestService_GetHealthHandler_ResponseFormat(t *testing.T) {
 func TestService_GetHealthHandler_ContentType(t *testing.T) {
 	// Dedicated test for content-type header
 	svc := testService()
-	
+
 	req := httptest.NewRequest(http.MethodGet, "/api/health", nil)
 	w := httptest.NewRecorder()
 

@@ -116,7 +116,7 @@ func TestService_GetServerInfoHandler(t *testing.T) {
 
 			// Create request
 			req := httptest.NewRequest(tt.method, "/api/server-info", nil)
-			
+
 			// Create response recorder
 			w := httptest.NewRecorder()
 
@@ -167,7 +167,7 @@ func TestService_GetServerInfoHandler_ResponseFormat(t *testing.T) {
 	// Setup successful response
 	scenarios := minio.TestScenarios{}
 	mockMinIO.SetServerInfoResponse(scenarios.SuccessfulServerInfo())
-	
+
 	req := httptest.NewRequest(http.MethodGet, "/api/server-info", nil)
 	w := httptest.NewRecorder()
 
@@ -215,7 +215,7 @@ func TestService_GetServerInfoHandler_ErrorHandling(t *testing.T) {
 
 	// Setup non-retryable error response (HTTP 400 is not retried by madmin)
 	mockMinIO.SetServerInfoNonRetryableError(http.StatusBadRequest, "Bad Request")
-	
+
 	req := httptest.NewRequest(http.MethodGet, "/api/server-info", nil)
 	w := httptest.NewRecorder()
 

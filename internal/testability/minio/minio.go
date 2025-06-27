@@ -6,14 +6,14 @@ import (
 	"net/http/httptest"
 	"time"
 
+	"github.com/elct9620/minio-lite-admin/internal/infra"
 	"github.com/go-chi/chi/v5"
 	"github.com/minio/madmin-go/v4"
-	"github.com/elct9620/minio-lite-admin/internal/infra"
 )
 
 // MockMinIOServer provides a mock MinIO server for testing
 type MockMinIOServer struct {
-	server   *httptest.Server
+	server    *httptest.Server
 	responses map[string]interface{}
 }
 
@@ -39,16 +39,16 @@ func NewMockMinIOServer() *MockMinIOServer {
 
 	// Create HTTP test server with chi router
 	r := chi.NewRouter()
-	
+
 	// MinIO Admin API endpoints
 	r.Route("/minio/admin", func(r chi.Router) {
 		r.Get("/v4/info", mock.handleServerInfo)
 		r.Get("/v3/info", mock.handleServerInfo)
 		r.Get("/info", mock.handleServerInfo)
 	})
-	
+
 	mock.server = httptest.NewServer(r)
-	
+
 	return mock
 }
 
@@ -164,7 +164,6 @@ func (m *MockMinIOServer) handleServerInfo(w http.ResponseWriter, r *http.Reques
 	// Default fallback response
 	http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 }
-
 
 // TestScenarios provides pre-configured test scenarios
 type TestScenarios struct{}

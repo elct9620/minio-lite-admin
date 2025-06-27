@@ -526,7 +526,9 @@ The project evolved from simple functional handlers to a well-structured service
 - Build output goes to `bin/` directory (excluded from git) for verification without cleanup
 - Use `go run ./main.go -dev` for development, `go build . -o bin/minio-lite-admin` for verification
 - Use `gofmt -w .` to format all Go files before running verification tests
-- Run `go test ./...` to execute all tests with coverage: `go test ./... -cover`
+- Run `go test ./...` to execute all tests
+- Run `go test ./... -cover` to execute all tests with coverage analysis
 - Use `golangci-lint run` for comprehensive static code analysis and linting
 - Test specific endpoints: `go test -v ./internal/handler/http -run TestService_GetServerInfoHandler`
 - Run tests with timeout limits: `go test -v ./internal/handler/http -timeout 30s`
+- Generate detailed coverage report: `go test ./internal/handler/http -coverprofile=coverage.out && go tool cover -func=coverage.out`
