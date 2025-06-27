@@ -25,7 +25,7 @@ The project uses `github.com/olivere/vite` for seamless integration between Go b
 - **HTTP Router**: Chi router (`github.com/go-chi/chi/v5`) with custom zerolog middleware (Recoverer, RequestID)
 - **Configuration**: Viper-based config management with flags, environment variables, and YAML support
 - **Logging**: Zerolog structured logging with configurable levels and pretty printing
-- **Handler Structure**: Organized in `internal/handler/http` package with separation of concerns
+- **Handler Structure**: Service-based architecture in `internal/handler/http` with struct methods and dependency injection
 - **API Structure**: RESTful endpoints under `/api` prefix with structured JSON responses
 - **Integration**: Uses `github.com/olivere/vite` for HTML fragment generation and asset serving
 - **Deployment**: Single binary with embedded frontend assets
@@ -44,9 +44,11 @@ internal/
 ├── service/         # Business logic layer
 │   └── get_server_info_service.go # MinIO server info service
 └── handler/
-    └── http/        # HTTP handlers
-        ├── api.go   # API endpoints (health, server-info)
-        ├── frontend.go # Frontend serving with Vite integration
+    └── http/        # HTTP handlers (Service-based architecture)
+        ├── service.go # Main Service struct and constructor
+        ├── get_health.go # Health check handler method
+        ├── get_server_info.go # MinIO server info handler method
+        ├── get_root.go # Frontend/static asset handler method
         └── middleware.go # Custom chi middleware (zerolog request logger)
 ```
 
@@ -227,6 +229,38 @@ export default defineConfig({
 
 **Design Tokens**: See `DESIGN_TOKENS.md` for comprehensive styling guidelines and design system documentation.
 
+### Service Architecture Pattern
+
+The HTTP layer uses a Service-based architecture for better dependency management and testability:
+
+**Service Structure**:
+```go
+type Service struct {
+    config               *config.Config
+    logger               zerolog.Logger
+    getServerInfoService *service.GetServerInfoService
+    distFS               embed.FS
+}
+
+func NewService(...deps) (http.Handler, error) {
+    // Constructor with dependency injection
+    return router, nil
+}
+```
+
+**Handler Organization**:
+- `service.go` - Main Service struct and router configuration
+- `get_health.go` - `GetHealthHandler()` method for health checks
+- `get_server_info.go` - `GetServerInfoHandler()` method for MinIO info
+- `get_root.go` - `GetRootHandler()` method for frontend assets
+- `middleware.go` - Shared middleware functions
+
+**Benefits**:
+- **Dependency Injection**: All dependencies managed through Service struct
+- **Testability**: Easy to mock Service methods for unit testing
+- **Organization**: Clear file-to-method mapping for maintainability
+- **Consistency**: Unified approach to handler management
+
 ### GitHub Actions CI/CD
 
 **Workflow File**: `.github/workflows/docker-publish.yml`
@@ -269,7 +303,9 @@ docker run -p 8080:8080 ghcr.io/[owner]/minio-lite-admin:latest
 - ✅ Service layer for business logic (`internal/service`)
 - ✅ Context-based logging for request tracing
 - ✅ `/api/server-info` endpoint returns MinIO server information
-- ✅ Structured HTTP handlers in `internal/handler/http`
+- ✅ Service-based HTTP handler architecture with dependency injection
+- ✅ Modular UI components following clean architecture principles
+- ✅ Conditional asset embedding with Go build tags
 - ✅ Vue.js 3 + TypeScript frontend scaffold
 - ✅ TailwindCSS 4.1.11 integration with modern/minimal dashboard UI
 - ✅ Dashboard with server status card, loading states, and responsive design
@@ -289,6 +325,96 @@ docker run -p 8080:8080 ghcr.io/[owner]/minio-lite-admin:latest
 ## License Constraints
 
 This project uses AGPLv3 license due to dependency on `github.com/minio/madmin-go` which is AGPLv3 licensed. Any derivative work must maintain AGPLv3 compatibility.
+
+## Working Style & Architecture Decisions
+
+This section documents key insights learned from collaborating with Aotokitsuruya and architectural decisions made during development.
+
+### Code Organization Philosophy
+
+**Clean Architecture Principles**:
+- Clear separation between domain logic (`internal/service/`) and HTTP concerns (`internal/handler/http/`)
+- Dependency injection pattern using struct-based services
+- Single responsibility principle with dedicated files per handler
+- Interface-based abstractions for testability
+
+**File Naming Conventions**:
+- Handler files follow `get_*.go` pattern for HTTP GET endpoints
+- Handler methods align with file names: `get_health.go` → `GetHealthHandler()`
+- Consistent naming improves code discoverability and maintenance
+
+### Service Architecture Pattern
+
+**Evolution from Functional to Struct-Based Handlers**:
+```go
+// Old approach (functional)
+func HealthHandler(w http.ResponseWriter, r *http.Request) { ... }
+
+// New approach (struct methods)
+type Service struct { dependencies... }
+func (s *Service) GetHealthHandler(w http.ResponseWriter, r *http.Request) { ... }
+```
+
+**Benefits Achieved**:
+- Better dependency management and injection
+- Improved testability with mockable Service struct
+- Cleaner separation of concerns
+- More maintainable object-oriented design
+
+### Build System Design
+
+**Conditional Asset Embedding**:
+- Development mode as default (no build tags required)
+- Production builds use `-tags dist` for embedded assets
+- Prevents build failures when `dist/` directory doesn't exist
+- Clean separation between development and production concerns
+
+**Key Files**:
+- `embed_dev.go` - Default development mode with empty embed.FS
+- `embed_dist.go` - Production mode with `//go:embed all:dist`
+- Build tags prevent conflicts and compilation errors
+
+### Frontend Integration Strategy
+
+**Hybrid Approach**:
+- Development: Vite dev server proxy for hot reloading
+- Production: Embedded static assets in Go binary
+- Single binary deployment with all assets included
+
+**Critical Design Decision**: 
+The `ViteURL` in configuration must be browser-accessible, not just server-accessible. This ensures proper asset loading in containerized environments.
+
+### Verification and Quality Practices
+
+**Code Quality Workflow**:
+1. Use `gofmt -w .` for formatting verification before builds
+2. Test both development and production build modes
+3. Verify functionality with actual HTTP requests
+4. Commit only after successful verification
+
+**Development Workflow**:
+1. Terminal 1: `pnpm dev` (Vite dev server)
+2. Terminal 2: `go run ./main.go -dev` (Go server in dev mode)
+3. Browser: http://localhost:8080
+
+### Lessons Learned
+
+**Effective Collaboration Patterns**:
+- Start with clear requirements and desired end state
+- Break complex refactoring into manageable steps with clear todos
+- Verify each step with actual builds and tests
+- Use consistent naming conventions for better code organization
+- Prefer explicit over implicit (build tags, naming patterns)
+
+**Technical Insights**:
+- Go build tags are powerful for conditional compilation
+- Struct-based HTTP handlers improve dependency management
+- Consistent file/method naming reduces cognitive load
+- Service pattern enables better testing and mocking
+- Single binary deployment simplifies operations
+
+**Architecture Evolution**:
+The project evolved from simple functional handlers to a well-structured service-based architecture while maintaining backward compatibility and improving maintainability.
 
 ## Development Notes
 
