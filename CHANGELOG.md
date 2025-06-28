@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/elct9620/minio-lite-admin/compare/v0.1.1...v0.2.0) (2025-06-28)
+
+
+### Features
+
+* implement context-aware zerolog middleware for better request tracing ([33fdbfc](https://github.com/elct9620/minio-lite-admin/commit/33fdbfc943f2b5bdaf7bcb4f672a98b817a91e07))
+
 ## [0.1.1](https://github.com/elct9620/minio-lite-admin/compare/v0.1.0...v0.1.1) (2025-06-28)
 
 
