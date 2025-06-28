@@ -108,13 +108,13 @@ pnpm preview
 ### Backend Development
 ```bash
 # Development mode (default, no embedded assets required)
-go run ./main.go -dev
+go run . -dev
 
 # Production mode with embedded assets
-go run -tags dist ./main.go
+go run -tags dist .
 
 # Custom port (development mode)
-go run ./main.go -dev -addr :3000
+go run . -dev -addr :3000
 
 # Build binary for verification (development mode, outputs to bin/)
 go build -o bin/minio-lite-admin .
@@ -127,7 +127,7 @@ go build -tags dist -o bin/minio-lite-admin .
 
 ### Full Development Workflow
 1. Terminal 1: `pnpm dev` (starts Vite dev server)
-2. Terminal 2: `go run ./main.go -dev` (starts Go server in dev mode)
+2. Terminal 2: `go run . -dev` (starts Go server in dev mode)
 3. Visit http://localhost:8080
 
 ### Docker Development
@@ -371,6 +371,7 @@ docker run -p 8080:8080 ghcr.io/[owner]/minio-lite-admin:latest
 - ✅ AccessKeyCard component for displaying individual access key information
 - ✅ useAccessKeys composable for reactive API integration with proper error handling
 - ✅ Fixed API response format to ensure consistent JSON array format (not null)
+- ✅ Cryptographically secure access key generation with crypto.getRandomValues() and enhanced character sets
 
 **Next Steps (TODO)**:
 - Site replication configuration and management
@@ -460,6 +461,22 @@ This project uses AGPLv3 license due to dependency on `github.com/minio/madmin-g
 - Event handlers: open modal → API call → close + refresh
 - Conditional rendering: `v-if="itemToDelete"` to ensure props are available
 
+## Security Implementation
+
+### Access Key Generation (Frontend)
+- **Location**: `CreateAccessKeyModal.vue:159-179`, `EditAccessKeyModal.vue:226-237`
+- **Method**: `crypto.getRandomValues()` for cryptographically secure generation
+- **Access Key Format**: `AKIA` prefix + 16 secure chars (AWS-compatible)
+- **Secret Key Charset**: Alphanumeric + special chars `+/=!@#$%^&*()_-[]{}|;:,.<>?` (79 chars total)
+- **Length**: Access keys = 20 chars, Secret keys = 40 chars
+- **Security**: High entropy, cryptographically secure, MinIO compatible
+
+### Key Security Patterns
+- Always use `crypto.getRandomValues()` over `Math.random()` for credentials
+- Backend accepts any custom keys without validation (rely on MinIO validation)
+- MinIO auto-generates secure keys when `AccessKey`/`SecretKey` are empty
+- Special characters in secret keys are fully supported by MinIO backend
+
 ## Development Notes
 
 **Requirements**: Go 1.24+ and Node.js
@@ -467,6 +484,7 @@ This project uses AGPLv3 license due to dependency on `github.com/minio/madmin-g
 **Key Patterns**:
 - API endpoints under `/api` prefix, frontend routes served via SPA fallback
 - Development: Vite dev server, Production: embedded assets with `-tags dist`
+- **Build Commands**: Use `go run .` (not `go run ./main.go`) to include embed files correctly
 - All slice responses must be initialized to `[]` (not `nil`) for JSON compatibility
 - Mock servers require madmin v4 encryption for MinIO Admin API testing
 - Service creation: MinIO auto-generates secure keys when `AccessKey`/`SecretKey` are empty
