@@ -223,7 +223,7 @@ func (m *MockMinIOServer) handleUpdateServiceAccount(w http.ResponseWriter, r *h
 	}
 
 	// Update service account in store
-	updates := make(map[string]interface{})
+	updates := make(map[string]any)
 	if len(req.NewPolicy) > 0 {
 		updates["policy"] = req.NewPolicy
 	}

@@ -95,7 +95,7 @@ func (s *Service) serveIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = tmpl.Execute(w, map[string]interface{}{
+	if err = tmpl.Execute(w, map[string]any{
 		"Vite": viteFragment,
 	}); err != nil {
 		http.Error(w, "Error executing template", http.StatusInternalServerError)

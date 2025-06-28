@@ -20,7 +20,7 @@ func TestService_PostAccessKeysHandler(t *testing.T) {
 	tests := []struct {
 		name               string
 		setupMock          func(*minio.MockMinIOServer)
-		requestBody        interface{}
+		requestBody        any
 		expectedStatusCode int
 		expectedError      string
 		validateResponse   func(t *testing.T, response *service.CreateServiceAccountResponse)

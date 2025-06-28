@@ -109,7 +109,7 @@ func TestService_GetHealthHandler_ResponseFormat(t *testing.T) {
 	svc.GetHealthHandler(w, req)
 
 	// Check that response is valid JSON
-	var response map[string]interface{}
+	var response map[string]any
 	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 		t.Errorf("GetHealthHandler() response is not valid JSON: %v", err)
 		return

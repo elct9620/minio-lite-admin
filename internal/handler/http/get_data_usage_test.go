@@ -107,7 +107,7 @@ func TestService_GetDataUsageHandler(t *testing.T) {
 
 			// Check response body for successful cases
 			if tt.expectedFields != nil {
-				var response map[string]interface{}
+				var response map[string]any
 				if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 					t.Errorf("GetDataUsageHandler() failed to unmarshal response: %v", err)
 					return
@@ -140,7 +140,7 @@ func TestService_GetDataUsageHandler(t *testing.T) {
 				}
 
 				if detailsField, ok := response["diskDetails"]; ok {
-					if _, isArray := detailsField.([]interface{}); !isArray {
+					if _, isArray := detailsField.([]any); !isArray {
 						t.Errorf("GetDataUsageHandler() diskDetails should be array, got: %T", detailsField)
 					}
 				}

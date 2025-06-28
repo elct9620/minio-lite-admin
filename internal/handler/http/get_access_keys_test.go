@@ -195,7 +195,7 @@ func TestService_GetAccessKeysHandler(t *testing.T) {
 
 			// Check response body for successful cases
 			if tt.expectedFields != nil {
-				var response map[string]interface{}
+				var response map[string]any
 				if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 					t.Errorf("GetAccessKeysHandler() failed to unmarshal response: %v", err)
 					return
@@ -210,7 +210,7 @@ func TestService_GetAccessKeysHandler(t *testing.T) {
 
 				// Check specific field types
 				if accessKeysField, ok := response["accessKeys"]; ok {
-					if _, isArray := accessKeysField.([]interface{}); !isArray {
+					if _, isArray := accessKeysField.([]any); !isArray {
 						t.Errorf("GetAccessKeysHandler() accessKeys should be array, got: %T", accessKeysField)
 					}
 				}

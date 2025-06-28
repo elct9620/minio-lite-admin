@@ -452,6 +452,14 @@ This project uses AGPLv3 license due to dependency on `github.com/minio/madmin-g
 - MinIO auto-generates secure keys when `AccessKey`/`SecretKey` are empty
 - Special characters in secret keys are fully supported by MinIO backend
 
+## Coding Style
+
+### Go Conventions
+- **Type Alias**: Use `any` instead of `interface{}` for better readability (Go 1.18+ standard)
+- **Error Handling**: Always handle errors explicitly, avoid ignoring with `_`
+- **Naming**: Follow Go naming conventions (PascalCase for exported, camelCase for unexported)
+- **Package Names**: Short, lowercase, single words when possible
+
 ## Development Notes
 
 **Requirements**: Go 1.24+ and Node.js

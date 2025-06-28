@@ -180,7 +180,7 @@ func TestService_GetServerInfoHandler_ResponseFormat(t *testing.T) {
 	}
 
 	// Check that response is valid JSON
-	var response map[string]interface{}
+	var response map[string]any
 	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 		t.Errorf("GetServerInfoHandler() response is not valid JSON: %v", err)
 		return

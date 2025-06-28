@@ -14,7 +14,7 @@ import (
 // MockMinIOServer provides a mock MinIO server for testing
 type MockMinIOServer struct {
 	server          *httptest.Server
-	responses       map[string]interface{}
+	responses       map[string]any
 	serviceAccounts map[string]*ServiceAccountInfo // In-memory store for service accounts
 }
 
@@ -34,7 +34,7 @@ type ServiceAccountInfo struct {
 // NewMockMinIOServer creates a new mock MinIO server
 func NewMockMinIOServer() *MockMinIOServer {
 	mock := &MockMinIOServer{
-		responses:       make(map[string]interface{}),
+		responses:       make(map[string]any),
 		serviceAccounts: make(map[string]*ServiceAccountInfo),
 	}
 
@@ -111,7 +111,7 @@ func (m *MockMinIOServer) GetServiceAccountFromStore(accessKey string) (*Service
 }
 
 // UpdateServiceAccountInStore updates a service account in the in-memory store
-func (m *MockMinIOServer) UpdateServiceAccountInStore(accessKey string, updates map[string]interface{}) bool {
+func (m *MockMinIOServer) UpdateServiceAccountInStore(accessKey string, updates map[string]any) bool {
 	sa, exists := m.serviceAccounts[accessKey]
 	if !exists {
 		return false

@@ -23,7 +23,7 @@ func TestService_PutAccessKeysHandler(t *testing.T) {
 		name               string
 		setupMock          func(*minio.MockMinIOServer)
 		accessKey          string
-		requestBody        interface{}
+		requestBody        any
 		expectedStatusCode int
 		expectedError      string
 		validateResponse   func(t *testing.T, response *service.UpdateServiceAccountResponse)
@@ -34,7 +34,7 @@ func TestService_PutAccessKeysHandler(t *testing.T) {
 				mock.SetUpdateServiceAccountSuccess()
 			},
 			accessKey: "AKIAIOSFODNN7EXAMPLE",
-			requestBody: map[string]interface{}{
+			requestBody: map[string]any{
 				"newPolicy": `{"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": "s3:GetObject", "Resource": "arn:aws:s3:::bucket/*"}]}`,
 			},
 			expectedStatusCode: http.StatusOK,
@@ -53,7 +53,7 @@ func TestService_PutAccessKeysHandler(t *testing.T) {
 				mock.SetUpdateServiceAccountSuccess()
 			},
 			accessKey: "AKIAIOSFODNN7EXAMPLE",
-			requestBody: map[string]interface{}{
+			requestBody: map[string]any{
 				"newSecretKey": "newSecretKey123456789012345",
 			},
 			expectedStatusCode: http.StatusOK,
@@ -72,7 +72,7 @@ func TestService_PutAccessKeysHandler(t *testing.T) {
 				mock.SetUpdateServiceAccountSuccess()
 			},
 			accessKey: "AKIAIOSFODNN7EXAMPLE",
-			requestBody: map[string]interface{}{
+			requestBody: map[string]any{
 				"newStatus": string(madmin.AccountDisabled),
 			},
 			expectedStatusCode: http.StatusOK,
@@ -91,7 +91,7 @@ func TestService_PutAccessKeysHandler(t *testing.T) {
 				mock.SetUpdateServiceAccountSuccess()
 			},
 			accessKey: "AKIAIOSFODNN7EXAMPLE",
-			requestBody: map[string]interface{}{
+			requestBody: map[string]any{
 				"newName":        "Updated Service Account",
 				"newDescription": "Updated description",
 			},
@@ -111,7 +111,7 @@ func TestService_PutAccessKeysHandler(t *testing.T) {
 				mock.SetUpdateServiceAccountSuccess()
 			},
 			accessKey: "AKIAIOSFODNN7EXAMPLE",
-			requestBody: map[string]interface{}{
+			requestBody: map[string]any{
 				"newExpiration": time.Now().Add(24 * time.Hour).Unix(),
 			},
 			expectedStatusCode: http.StatusOK,
@@ -130,7 +130,7 @@ func TestService_PutAccessKeysHandler(t *testing.T) {
 				mock.SetUpdateServiceAccountSuccess()
 			},
 			accessKey: "AKIAIOSFODNN7EXAMPLE",
-			requestBody: map[string]interface{}{
+			requestBody: map[string]any{
 				"newPolicy":      `{"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": "s3:*", "Resource": "*"}]}`,
 				"newSecretKey":   "newSecretKey123456789012345",
 				"newStatus":      string(madmin.AccountEnabled),
@@ -152,7 +152,7 @@ func TestService_PutAccessKeysHandler(t *testing.T) {
 			name:               "missing access key parameter",
 			setupMock:          func(mock *minio.MockMinIOServer) {},
 			accessKey:          "",
-			requestBody:        map[string]interface{}{},
+			requestBody:        map[string]any{},
 			expectedStatusCode: http.StatusBadRequest,
 			expectedError:      "Access key is required",
 		},
@@ -160,7 +160,7 @@ func TestService_PutAccessKeysHandler(t *testing.T) {
 			name:               "empty access key parameter",
 			setupMock:          func(mock *minio.MockMinIOServer) {},
 			accessKey:          "   ",
-			requestBody:        map[string]interface{}{},
+			requestBody:        map[string]any{},
 			expectedStatusCode: http.StatusBadRequest,
 			expectedError:      "Access key is required",
 		},
@@ -178,7 +178,7 @@ func TestService_PutAccessKeysHandler(t *testing.T) {
 				mock.SetUpdateServiceAccountError(500, "Internal Server Error")
 			},
 			accessKey: "AKIAIOSFODNN7EXAMPLE",
-			requestBody: map[string]interface{}{
+			requestBody: map[string]any{
 				"newPolicy": `{"Version": "2012-10-17", "Statement": []}`,
 			},
 			expectedStatusCode: http.StatusInternalServerError,
@@ -190,7 +190,7 @@ func TestService_PutAccessKeysHandler(t *testing.T) {
 				mock.SetUpdateServiceAccountError(401, "Unauthorized")
 			},
 			accessKey: "AKIAIOSFODNN7EXAMPLE",
-			requestBody: map[string]interface{}{
+			requestBody: map[string]any{
 				"newPolicy": `{"Version": "2012-10-17", "Statement": []}`,
 			},
 			expectedStatusCode: http.StatusInternalServerError,
@@ -202,7 +202,7 @@ func TestService_PutAccessKeysHandler(t *testing.T) {
 				mock.SetUpdateServiceAccountError(404, "Service account not found")
 			},
 			accessKey: "NONEXISTENT",
-			requestBody: map[string]interface{}{
+			requestBody: map[string]any{
 				"newPolicy": `{"Version": "2012-10-17", "Statement": []}`,
 			},
 			expectedStatusCode: http.StatusInternalServerError,
@@ -214,7 +214,7 @@ func TestService_PutAccessKeysHandler(t *testing.T) {
 				mock.SetUpdateServiceAccountError(403, "Forbidden")
 			},
 			accessKey: "AKIAIOSFODNN7EXAMPLE",
-			requestBody: map[string]interface{}{
+			requestBody: map[string]any{
 				"newPolicy": `{"Version": "2012-10-17", "Statement": []}`,
 			},
 			expectedStatusCode: http.StatusInternalServerError,
@@ -502,7 +502,7 @@ func TestService_PutAccessKeysHandler_Integration(t *testing.T) {
 	defer server.Close()
 
 	// Prepare request body
-	requestBody := map[string]interface{}{
+	requestBody := map[string]any{
 		"newPolicy": `{"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": "s3:GetObject", "Resource": "*"}]}`,
 		"newName":   "Integration Test Service Account",
 	}

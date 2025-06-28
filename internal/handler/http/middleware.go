@@ -35,7 +35,7 @@ type StructuredLoggerEntry struct {
 	Logger zerolog.Logger
 }
 
-func (l *StructuredLoggerEntry) Write(status, bytes int, header http.Header, elapsed time.Duration, extra interface{}) {
+func (l *StructuredLoggerEntry) Write(status, bytes int, header http.Header, elapsed time.Duration, extra any) {
 	l.Logger.Info().
 		Int("status", status).
 		Int("bytes", bytes).
@@ -43,7 +43,7 @@ func (l *StructuredLoggerEntry) Write(status, bytes int, header http.Header, ela
 		Send()
 }
 
-func (l *StructuredLoggerEntry) Panic(v interface{}, stack []byte) {
+func (l *StructuredLoggerEntry) Panic(v any, stack []byte) {
 	l.Logger.Error().
 		Str("stack", string(stack)).
 		Interface("panic", v).

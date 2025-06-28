@@ -377,7 +377,7 @@ func TestUpdateServiceAccountService_Execute_PolicyValidation(t *testing.T) {
 
 			// Validate the policy was passed through correctly by checking the JSON parsing
 			if tt.policy != "" {
-				var parsed map[string]interface{}
+				var parsed map[string]any
 				if err := json.Unmarshal([]byte(tt.policy), &parsed); err != nil {
 					t.Errorf("Policy should be valid JSON: %v", err)
 				}

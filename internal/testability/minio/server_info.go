@@ -62,20 +62,20 @@ func (m *MockMinIOServer) handleServerInfo(w http.ResponseWriter, r *http.Reques
 		if serverInfo, ok := response.(ServerInfoResponse); ok {
 			// MinIO admin API returns server info in a specific format
 			// We need to match the expected response structure for madmin.InfoMessage
-			minioResponse := map[string]interface{}{
+			minioResponse := map[string]any{
 				"mode":         serverInfo.Mode,
 				"region":       serverInfo.Region,
 				"deploymentId": serverInfo.DeploymentID,
 				"platform":     "linux",
 				"runtime":      "go1.21.0",
-				"servers": []map[string]interface{}{
+				"servers": []map[string]any{
 					{
 						"endpoint": m.server.URL,
 						"uptime":   3600,
 						"version":  "minio-test",
 						"commitID": "test-commit",
-						"network":  map[string]interface{}{},
-						"drives":   []interface{}{},
+						"network":  map[string]any{},
+						"drives":   []any{},
 					},
 				},
 			}
