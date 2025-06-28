@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/elct9620/minio-lite-admin/compare/v0.1.0...v0.1.1) (2025-06-28)
+
+
+### Bug Fixes
+
+* remove incorrect package-name from release-please workflow ([d7d498f](https://github.com/elct9620/minio-lite-admin/commit/d7d498f3326dbf2470e2bba6e0d19e07c084de48))
+
 ## 0.1.0 (2025-06-28)
 
 
