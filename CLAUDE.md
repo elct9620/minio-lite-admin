@@ -216,13 +216,13 @@ The project uses Go build tags to conditionally compile embedded assets:
 - File: `embed_dev.go` with `//go:build !dist` tag
 - Contains empty `embed.FS` variable
 - No `dist/` directory required for compilation
-- Command: `go run ./main.go -dev`
+- Command: `go run . -dev`
 
 **Production Mode**:
 - File: `embed_dist.go` with `//go:build dist` tag  
 - Contains `//go:embed all:dist` directive
 - Requires `dist/` directory with built frontend assets
-- Command: `go run -tags dist ./main.go`
+- Command: `go run -tags dist .`
 
 This approach prevents build failures when the `dist/` directory doesn't exist during development.
 
