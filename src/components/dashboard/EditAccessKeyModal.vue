@@ -75,13 +75,23 @@ const isOpen = computed({
   set: (value) => emit('update:open', value)
 })
 
+// Helper function to normalize status from API
+const normalizeStatusFromAPI = (status: string): string => {
+  // Handle potential API variations and edge cases
+  if (!status) return 'enabled' // Default to enabled if status is missing
+  if (status === 'on') return 'enabled'
+  if (status === 'off') return 'disabled'
+  if (status === 'enabled' || status === 'disabled') return status
+  return 'enabled' // Default fallback
+}
+
 // Watch for changes in accessKey prop to populate form
 watch(() => props.accessKey, (newAccessKey) => {
   if (newAccessKey) {
     form.value = {
       newPolicy: '',
       newSecretKey: '',
-      newStatus: newAccessKey.accountStatus,
+      newStatus: normalizeStatusFromAPI(newAccessKey.accountStatus || 'enabled'),
       newName: newAccessKey.name || '',
       newDescription: newAccessKey.description || '',
       newExpiration: convertFromTimestamp(newAccessKey.expiration as any || 0)
@@ -93,12 +103,20 @@ watch(() => props.accessKey, (newAccessKey) => {
   }
 }, { immediate: true })
 
+// Watch for modal open state to ensure form is reset properly
+watch(() => props.open, (isOpen) => {
+  if (isOpen && !props.accessKey) {
+    // Reset form if modal is opened but no access key is provided
+    resetForm()
+  }
+})
+
 // Reset form when modal opens/closes
 const resetForm = () => {
   form.value = {
     newPolicy: '',
     newSecretKey: '',
-    newStatus: '',
+    newStatus: 'enabled', // Default to enabled instead of empty string
     newName: '',
     newDescription: '',
     newExpiration: ''
@@ -138,7 +156,8 @@ const updateServiceAccount = async () => {
       payload.newDescription = form.value.newDescription?.trim()
     }
     
-    if (form.value.newStatus !== props.accessKey.accountStatus) {
+    if (form.value.newStatus !== normalizeStatusFromAPI(props.accessKey.accountStatus)) {
+      // Ensure we send the correct status value to API
       payload.newStatus = form.value.newStatus
     }
     
@@ -211,6 +230,21 @@ const validatePolicy = (policy: string): boolean => {
 
 // Policy validation
 const isPolicyValid = computed(() => validatePolicy(form.value.newPolicy || ''))
+
+// Status mapping for v-model (handles potential API value variations)
+const statusValue = computed({
+  get: () => {
+    // Map API values to UI values if needed
+    const status = form.value.newStatus
+    if (status === 'on') return 'enabled'
+    if (status === 'off') return 'disabled'
+    return status // Return as-is for 'enabled'/'disabled'
+  },
+  set: (value: string) => {
+    // Set the form value directly since UI uses 'enabled'/'disabled'
+    form.value.newStatus = value
+  }
+})
 </script>
 
 <template>
@@ -285,7 +319,7 @@ const isPolicyValid = computed(() => validatePolicy(form.value.newPolicy || ''))
                   Status
                 </label>
                 <select
-                  v-model="form.newStatus"
+                  v-model="statusValue"
                   class="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
                   <option value="enabled">Enabled</option>
