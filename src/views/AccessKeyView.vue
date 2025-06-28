@@ -4,6 +4,7 @@ import { KeyIcon, CheckCircleIcon, BeakerIcon, ClockIcon } from '@heroicons/vue/
 import LoadingSpinner from '../components/common/LoadingSpinner.vue'
 import ErrorMessage from '../components/common/ErrorMessage.vue'
 import AccessKeyCard from '../components/dashboard/AccessKeyCard.vue'
+import CreateAccessKeyModal from '../components/dashboard/CreateAccessKeyModal.vue'
 import { useAccessKeys } from '../composables/useAccessKeys'
 
 const { 
@@ -22,6 +23,7 @@ const {
 } = useAccessKeys()
 
 const selectedFilter = ref<'all' | 'users' | 'serviceAccounts' | 'sts'>('all')
+const showCreateModal = ref(false)
 
 const filteredAccessKeys = computed(() => {
   switch (selectedFilter.value) {
@@ -41,6 +43,11 @@ const handleFilterChange = async (filter: typeof selectedFilter.value) => {
   await fetchAccessKeys({ type: filter })
 }
 
+const handleAccessKeyCreated = async () => {
+  // Refresh the access keys list after creation
+  await fetchAccessKeys({ type: selectedFilter.value })
+}
+
 onMounted(() => {
   fetchAccessKeys()
 })
@@ -57,7 +64,10 @@ onMounted(() => {
             Manage MinIO access keys and service accounts
           </p>
         </div>
-        <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+        <button 
+          @click="showCreateModal = true"
+          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+        >
           Create Access Key
         </button>
       </div>
@@ -180,5 +190,11 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- Create Access Key Modal -->
+    <CreateAccessKeyModal 
+      v-model:open="showCreateModal" 
+      @created="handleAccessKeyCreated"
+    />
   </div>
 </template>

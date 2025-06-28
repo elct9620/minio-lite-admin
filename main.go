@@ -39,9 +39,10 @@ func main() {
 	// Initialize services
 	getServerInfoService := service.NewGetServerInfoService(minioClient)
 	listAccessKeysService := service.NewListAccessKeysService(minioClient)
+	addServiceAccountService := service.NewAddServiceAccountService(minioClient)
 
 	// Set up HTTP service with dependencies
-	r, err := httpHandler.NewService(cfg, log, getServerInfoService, listAccessKeysService, distFS)
+	r, err := httpHandler.NewService(cfg, log, getServerInfoService, listAccessKeysService, addServiceAccountService, distFS)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create HTTP service")
 	}

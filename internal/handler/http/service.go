@@ -13,11 +13,12 @@ import (
 
 // Service handles all HTTP requests and contains all dependencies
 type Service struct {
-	config                *config.Config
-	logger                zerolog.Logger
-	getServerInfoService  *service.GetServerInfoService
-	listAccessKeysService *service.ListAccessKeysService
-	distFS                embed.FS
+	config                   *config.Config
+	logger                   zerolog.Logger
+	getServerInfoService     *service.GetServerInfoService
+	listAccessKeysService    *service.ListAccessKeysService
+	addServiceAccountService *service.AddServiceAccountService
+	distFS                   embed.FS
 }
 
 // NewService creates a new HTTP service with all dependencies and returns the configured router
@@ -26,14 +27,16 @@ func NewService(
 	logger zerolog.Logger,
 	getServerInfoService *service.GetServerInfoService,
 	listAccessKeysService *service.ListAccessKeysService,
+	addServiceAccountService *service.AddServiceAccountService,
 	distFS embed.FS,
 ) (http.Handler, error) {
 	svc := &Service{
-		config:                cfg,
-		logger:                logger,
-		getServerInfoService:  getServerInfoService,
-		listAccessKeysService: listAccessKeysService,
-		distFS:                distFS,
+		config:                   cfg,
+		logger:                   logger,
+		getServerInfoService:     getServerInfoService,
+		listAccessKeysService:    listAccessKeysService,
+		addServiceAccountService: addServiceAccountService,
+		distFS:                   distFS,
 	}
 
 	router := chi.NewRouter()
@@ -49,6 +52,7 @@ func NewService(
 		r.Get("/server-info", svc.GetServerInfoHandler)
 		r.Get("/data-usage", svc.GetDataUsageHandler)
 		r.Get("/access-keys", svc.GetAccessKeysHandler)
+		r.Post("/access-keys", svc.PostAccessKeysHandler)
 	})
 
 	// Frontend routes
