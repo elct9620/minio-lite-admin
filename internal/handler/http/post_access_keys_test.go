@@ -582,7 +582,7 @@ func TestService_PostAccessKeysHandler_Integration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to make request: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Validate response
 	if resp.StatusCode != http.StatusCreated {

@@ -71,7 +71,7 @@ func NewMockMinIOServer() *MockMinIOServer {
 	// Add a catch-all handler for unhandled requests
 	r.HandleFunc("/*", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("Not Found"))
+		_, _ = w.Write([]byte("Not Found"))
 	})
 
 	mock.server = httptest.NewServer(r)

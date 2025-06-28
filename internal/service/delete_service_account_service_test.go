@@ -157,7 +157,7 @@ func TestDeleteServiceAccountService_NewDeleteServiceAccountService(t *testing.T
 	service := NewDeleteServiceAccountService(minioClient)
 
 	if service == nil {
-		t.Error("Expected service to be created, got nil")
+		t.Fatal("Expected service to be created, got nil")
 	}
 
 	if service.minioClient != minioClient {

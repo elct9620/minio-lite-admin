@@ -67,11 +67,12 @@ func TestListAccessKeysService_Execute(t *testing.T) {
 				var adminSA, backupSA, testSA *AccessKeyInfo
 				for i := range result.AccessKeys {
 					ak := &result.AccessKeys[i]
-					if ak.AccessKey == "AKIAIOSFODNN7EXAMPLE" {
+					switch ak.AccessKey {
+					case "AKIAIOSFODNN7EXAMPLE":
 						adminSA = ak
-					} else if ak.AccessKey == "AKIAI44QH8DHBEXAMPLE" {
+					case "AKIAI44QH8DHBEXAMPLE":
 						backupSA = ak
-					} else if ak.AccessKey == "AKIATEST123456789012" {
+					case "AKIATEST123456789012":
 						testSA = ak
 					}
 				}
