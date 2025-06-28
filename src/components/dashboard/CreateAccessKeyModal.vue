@@ -1,19 +1,20 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { XMarkIcon, KeyIcon, EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline'
+import AccessKeyCredentialsModal from './AccessKeyCredentialsModal.vue'
 
 interface Props {
   open: boolean
 }
 
 interface CreateAccessKeyRequest {
-  name: string
-  description: string
-  accessKey: string
-  secretKey: string
-  policy: string
-  targetUser: string
-  expiration: number | undefined
+  name?: string
+  description?: string
+  accessKey?: string
+  secretKey?: string
+  policy?: string
+  targetUser?: string
+  expiration?: number
 }
 
 interface CreateAccessKeyResponse {
@@ -31,8 +32,8 @@ const emit = defineEmits<{
   'created': [accessKey: CreateAccessKeyResponse]
 }>()
 
-// Form state
-const form = ref<CreateAccessKeyRequest>({
+// Form state (UI form uses strings for datetime-local inputs)
+const form = ref({
   name: '',
   description: '',
   accessKey: '',
@@ -47,6 +48,8 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 const showSecretKey = ref(false)
 const showCustomKeys = ref(false)
+const showCredentialsModal = ref(false)
+const createdCredentials = ref<CreateAccessKeyResponse | null>(null)
 
 // Modal control
 const isOpen = computed({
@@ -68,6 +71,8 @@ const resetForm = () => {
   error.value = null
   showSecretKey.value = false
   showCustomKeys.value = false
+  showCredentialsModal.value = false
+  createdCredentials.value = null
 }
 
 // Close modal
@@ -91,8 +96,8 @@ const createServiceAccount = async () => {
 
   try {
     // Prepare request payload
-    const payload: any = {
-      name: form.value.name.trim(),
+    const payload: CreateAccessKeyRequest = {
+      name: form.value.name.trim() || undefined,
       description: form.value.description.trim() || undefined,
       policy: form.value.policy.trim() || undefined,
       targetUser: form.value.targetUser.trim() || undefined,
@@ -138,11 +143,12 @@ const createServiceAccount = async () => {
 
     const result: CreateAccessKeyResponse = await response.json()
     
-    // Emit success event
-    emit('created', result)
+    // Store credentials and show them to user
+    createdCredentials.value = result
+    showCredentialsModal.value = true
     
-    // Close modal
-    closeModal()
+    // Close the create modal
+    isOpen.value = false
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'An unexpected error occurred'
   } finally {
@@ -170,6 +176,16 @@ const generateSecretKey = () => {
     result += chars.charAt(Math.floor(Math.random() * chars.length))
   }
   form.value.secretKey = result
+}
+
+// Handle credentials modal closed
+const handleCredentialsClosed = () => {
+  if (createdCredentials.value) {
+    // Emit success event after user has seen the credentials
+    emit('created', createdCredentials.value)
+    // Reset everything
+    resetForm()
+  }
 }
 </script>
 
@@ -377,4 +393,15 @@ const generateSecretKey = () => {
       </div>
     </div>
   </div>
+
+  <!-- Access Key Credentials Modal -->
+  <AccessKeyCredentialsModal
+    v-if="createdCredentials"
+    v-model:open="showCredentialsModal"
+    :access-key="createdCredentials.accessKey"
+    :secret-key="createdCredentials.secretKey"
+    title="Access Key Created Successfully"
+    description="Your new access key has been created successfully. Please save these credentials securely."
+    @closed="handleCredentialsClosed"
+  />
 </template>

@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { XMarkIcon, KeyIcon, EyeIcon, EyeSlashIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/outline'
 import type { AccessKeyInfo } from '../../composables/useAccessKeys'
+import AccessKeyCredentialsModal from './AccessKeyCredentialsModal.vue'
 
 interface Props {
   open: boolean
@@ -20,6 +21,7 @@ interface UpdateAccessKeyRequest {
 interface UpdateAccessKeyResponse {
   accessKey: string
   message: string
+  newSecretKey?: string // Optional, only populated when secret key is rotated
 }
 
 const props = defineProps<Props>()
@@ -28,8 +30,8 @@ const emit = defineEmits<{
   'updated': [accessKey: AccessKeyInfo]
 }>()
 
-// Form state
-const form = ref<UpdateAccessKeyRequest>({
+// Form state (UI form uses strings for datetime-local inputs)
+const form = ref({
   newPolicy: '',
   newSecretKey: '',
   newStatus: '',
@@ -44,6 +46,8 @@ const error = ref<string | null>(null)
 const showSecretKey = ref(false)
 const showRotateSecret = ref(false)
 const showAdvancedOptions = ref(false)
+const showCredentialsModal = ref(false)
+const rotatedCredentials = ref<{ accessKey: string; secretKey: string } | null>(null)
 
 // Helper functions for datetime conversion
 const convertFromTimestamp = (timestamp: number): string => {
@@ -94,7 +98,7 @@ watch(() => props.accessKey, (newAccessKey) => {
       newStatus: normalizeStatusFromAPI(newAccessKey.accountStatus || 'enabled'),
       newName: newAccessKey.name || '',
       newDescription: newAccessKey.description || '',
-      newExpiration: convertFromTimestamp(newAccessKey.expiration as any || 0)
+      newExpiration: convertFromTimestamp(newAccessKey.expiration as any || 0) || ''
     }
     // Reset UI state
     showSecretKey.value = false
@@ -125,6 +129,8 @@ const resetForm = () => {
   showSecretKey.value = false
   showRotateSecret.value = false
   showAdvancedOptions.value = false
+  showCredentialsModal.value = false
+  rotatedCredentials.value = null
 }
 
 // Close modal
@@ -169,7 +175,8 @@ const updateServiceAccount = async () => {
       payload.newSecretKey = form.value.newSecretKey.trim()
     }
     
-    if (form.value.newExpiration !== convertFromTimestamp(props.accessKey.expiration as any || 0)) {
+    const originalExpiration = convertFromTimestamp(props.accessKey.expiration as any || 0) || ''
+    if (form.value.newExpiration !== originalExpiration) {
       payload.newExpiration = convertToTimestamp(form.value.newExpiration)
     }
 
@@ -194,11 +201,21 @@ const updateServiceAccount = async () => {
 
     const result: UpdateAccessKeyResponse = await response.json()
     
-    // Emit success event
-    emit('updated', props.accessKey)
-    
-    // Close modal
-    closeModal()
+    // Check if secret key was rotated
+    if (result.newSecretKey) {
+      // Store rotated credentials and show them to user
+      rotatedCredentials.value = {
+        accessKey: result.accessKey,
+        secretKey: result.newSecretKey
+      }
+      showCredentialsModal.value = true
+      // Close the edit modal
+      isOpen.value = false
+    } else {
+      // No secret key rotation, just emit success and close
+      emit('updated', props.accessKey)
+      closeModal()
+    }
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'An unexpected error occurred'
   } finally {
@@ -245,6 +262,16 @@ const statusValue = computed({
     form.value.newStatus = value
   }
 })
+
+// Handle credentials modal closed
+const handleCredentialsClosed = () => {
+  if (rotatedCredentials.value && props.accessKey) {
+    // Emit success event after user has seen the rotated credentials
+    emit('updated', props.accessKey)
+    // Reset everything
+    resetForm()
+  }
+}
 </script>
 
 <template>
@@ -470,4 +497,16 @@ const statusValue = computed({
       </div>
     </div>
   </div>
+
+  <!-- Access Key Credentials Modal for Rotation -->
+  <AccessKeyCredentialsModal
+    v-if="rotatedCredentials"
+    v-model:open="showCredentialsModal"
+    :access-key="rotatedCredentials.accessKey"
+    :secret-key="rotatedCredentials.secretKey"
+    title="Secret Key Rotated Successfully"
+    description="Your secret key has been rotated successfully. Please save these credentials securely."
+    :is-rotation="true"
+    @closed="handleCredentialsClosed"
+  />
 </template>

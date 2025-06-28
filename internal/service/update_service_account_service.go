@@ -25,8 +25,9 @@ type UpdateServiceAccountRequest struct {
 }
 
 type UpdateServiceAccountResponse struct {
-	AccessKey string `json:"accessKey"`
-	Message   string `json:"message"`
+	AccessKey    string `json:"accessKey"`
+	Message      string `json:"message"`
+	NewSecretKey string `json:"newSecretKey,omitempty"` // Only populated when secret key is rotated
 }
 
 func NewUpdateServiceAccountService(minioClient *madmin.AdminClient) *UpdateServiceAccountService {
@@ -103,8 +104,18 @@ func (s *UpdateServiceAccountService) Execute(ctx context.Context, req UpdateSer
 		Str("accessKey", req.AccessKey).
 		Msg("Service account updated successfully")
 
-	return &UpdateServiceAccountResponse{
+	response := &UpdateServiceAccountResponse{
 		AccessKey: req.AccessKey,
 		Message:   "Service account updated successfully",
-	}, nil
+	}
+
+	// Include the new secret key in response if it was rotated
+	if req.NewSecretKey != "" {
+		response.NewSecretKey = req.NewSecretKey
+		logger.Debug().
+			Str("accessKey", req.AccessKey).
+			Msg("Secret key rotated, including new secret key in response")
+	}
+
+	return response, nil
 }
