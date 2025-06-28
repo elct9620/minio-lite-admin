@@ -25,7 +25,7 @@ docker run -p 8080:8080 \
   -e MINIO_URL=http://your-minio-server:9000 \
   -e MINIO_ROOT_USER=your-admin-user \
   -e MINIO_ROOT_PASSWORD=your-admin-password \
-  ghcr.io/[owner]/minio-lite-admin:latest
+  ghcr.io/elct9620/minio-lite-admin:latest
 ```
 
 ### Docker Compose (Side-car with MinIO)
@@ -54,7 +54,7 @@ services:
 
   # MinIO Lite Admin (side-car)
   minio-admin:
-    image: ghcr.io/[owner]/minio-lite-admin:latest
+    image: ghcr.io/elct9620/minio-lite-admin:latest
     ports:
       - "8080:8080"
     environment:
@@ -161,8 +161,8 @@ This project uses `github.com/minio/madmin-go` which is licensed under AGPLv3. A
 ## Support
 
 - 📖 Documentation: [CLAUDE.md](CLAUDE.md)
-- 🐛 Issues: [GitHub Issues](https://github.com/[owner]/minio-lite-admin/issues)
-- 💬 Discussions: [GitHub Discussions](https://github.com/[owner]/minio-lite-admin/discussions)
+- 🐛 Issues: [GitHub Issues](https://github.com/elct9620/minio-lite-admin/issues)
+- 💬 Discussions: [GitHub Discussions](https://github.com/elct9620/minio-lite-admin/discussions)
 
 ## Acknowledgments
 
