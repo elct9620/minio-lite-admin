@@ -1,7 +1,9 @@
 package minio
 
 import (
+	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"time"
@@ -47,6 +49,14 @@ func NewMockMinIOServer() *MockMinIOServer {
 		r.Get("/info", mock.handleServerInfo)
 		r.Get("/v4/list-users", mock.handleListUsers)
 		r.Get("/v4/list-access-keys-bulk", mock.handleListAccessKeysBulk)
+		r.Put("/v4/add-service-account", mock.handleAddServiceAccount)
+		r.Post("/v4/add-service-account", mock.handleAddServiceAccount) // Try POST as well
+	})
+
+	// Add a catch-all handler for unhandled requests
+	r.HandleFunc("/*", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("Not Found"))
 	})
 
 	mock.server = httptest.NewServer(r)
@@ -429,4 +439,173 @@ func (TestScenarios) SuccessfulAccessKeys() (AccessKeysUsersResponse, AccessKeys
 	}
 
 	return users, accessKeys
+}
+
+// Service Account creation related structures and methods
+
+// AddServiceAccountRequest represents the request to create a service account in MinIO
+// This should match madmin.AddServiceAccountReq
+type AddServiceAccountRequest struct {
+	Policy      json.RawMessage `json:"policy,omitempty"`
+	TargetUser  string          `json:"targetUser,omitempty"`
+	AccessKey   string          `json:"accessKey,omitempty"`
+	SecretKey   string          `json:"secretKey,omitempty"`
+	Name        string          `json:"name,omitempty"`
+	Description string          `json:"description,omitempty"`
+	Expiration  *time.Time      `json:"expiration,omitempty"`
+}
+
+// AddServiceAccountCredentials represents the credentials part of the response
+type AddServiceAccountCredentials struct {
+	AccessKey    string     `json:"accessKey"`
+	SecretKey    string     `json:"secretKey"`
+	SessionToken string     `json:"sessionToken,omitempty"`
+	Expiration   *time.Time `json:"expiration,omitempty"`
+}
+
+// AddServiceAccountResponse represents the response from creating a service account
+// This should match the madmin.AddServiceAccountResp structure that the client expects
+type AddServiceAccountResponse struct {
+	Credentials AddServiceAccountCredentials `json:"credentials"`
+}
+
+// SetAddServiceAccountResponse sets the response for add service account requests
+func (m *MockMinIOServer) SetAddServiceAccountResponse(response AddServiceAccountResponse) {
+	m.responses["add-service-account"] = response
+}
+
+// SetAddServiceAccountError sets an error response for add service account requests
+func (m *MockMinIOServer) SetAddServiceAccountError(statusCode int, message string) {
+	m.responses["add-service-account-error"] = struct {
+		StatusCode int
+		Message    string
+	}{
+		StatusCode: statusCode,
+		Message:    message,
+	}
+}
+
+// handleAddServiceAccount handles the MinIO admin add service account endpoint
+func (m *MockMinIOServer) handleAddServiceAccount(w http.ResponseWriter, r *http.Request) {
+	// Check if we should return an error
+	if errorResponse, exists := m.responses["add-service-account-error"]; exists {
+		if err, ok := errorResponse.(struct {
+			StatusCode int
+			Message    string
+		}); ok {
+			http.Error(w, err.Message, err.StatusCode)
+			return
+		}
+	}
+
+	// Read and decrypt request body
+	encryptedBody, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		return
+	}
+
+	// Decrypt the request using the same secret key as the client
+	decryptedBody, err := madmin.DecryptData("minioadmin", bytes.NewReader(encryptedBody))
+	if err != nil {
+		http.Error(w, "Failed to decrypt request body", http.StatusBadRequest)
+		return
+	}
+
+	var req AddServiceAccountRequest
+	if err := json.Unmarshal(decryptedBody, &req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	var responseData AddServiceAccountResponse
+
+	// Return success response
+	if response, exists := m.responses["add-service-account"]; exists {
+		if addResp, ok := response.(AddServiceAccountResponse); ok {
+			responseData = addResp
+		}
+	} else {
+		// Default response - generate credentials if not provided
+		accessKey := req.AccessKey
+		secretKey := req.SecretKey
+
+		if accessKey == "" {
+			accessKey = "AKIAIOSFODNN7EXAMPLE"
+		}
+		if secretKey == "" {
+			secretKey = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+		}
+
+		credentials := AddServiceAccountCredentials{
+			AccessKey:    accessKey,
+			SecretKey:    secretKey,
+			SessionToken: "",
+		}
+
+		// Only set expiration if it's not nil and not zero
+		if req.Expiration != nil && !req.Expiration.IsZero() {
+			credentials.Expiration = req.Expiration
+		}
+
+		responseData = AddServiceAccountResponse{
+			Credentials: credentials,
+		}
+	}
+
+	// Encode to JSON
+	jsonData, err := json.Marshal(responseData)
+	if err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+
+	// Encrypt the response using the same secret key as the client
+	encryptedData, err := madmin.EncryptData("minioadmin", jsonData)
+	if err != nil {
+		http.Error(w, "Failed to encrypt response", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	if _, err := w.Write(encryptedData); err != nil {
+		http.Error(w, "Failed to write response", http.StatusInternalServerError)
+		return
+	}
+}
+
+// SuccessfulAddServiceAccount returns a typical successful add service account response
+func (TestScenarios) SuccessfulAddServiceAccount() AddServiceAccountResponse {
+	return AddServiceAccountResponse{
+		Credentials: AddServiceAccountCredentials{
+			AccessKey:    "AKIAIOSFODNN7EXAMPLE",
+			SecretKey:    "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+			SessionToken: "",
+			Expiration:   nil, // No expiration
+		},
+	}
+}
+
+// CustomKeysAddServiceAccount returns a response with custom access and secret keys
+func (TestScenarios) CustomKeysAddServiceAccount(accessKey, secretKey string) AddServiceAccountResponse {
+	return AddServiceAccountResponse{
+		Credentials: AddServiceAccountCredentials{
+			AccessKey:    accessKey,
+			SecretKey:    secretKey,
+			SessionToken: "",
+			Expiration:   nil,
+		},
+	}
+}
+
+// ExpiringAddServiceAccount returns a response with expiration
+func (TestScenarios) ExpiringAddServiceAccount(expiration time.Time) AddServiceAccountResponse {
+	return AddServiceAccountResponse{
+		Credentials: AddServiceAccountCredentials{
+			AccessKey:    "AKIAIOSFODNN7EXAMPLE",
+			SecretKey:    "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+			SessionToken: "",
+			Expiration:   &expiration,
+		},
+	}
 }

@@ -17,11 +17,11 @@ type AddServiceAccountService struct {
 type CreateServiceAccountRequest struct {
 	Name        string  `json:"name,omitempty"`
 	Description string  `json:"description,omitempty"`
-	AccessKey   string  `json:"accessKey,omitempty"`   // Optional - MinIO generates if empty
-	SecretKey   string  `json:"secretKey,omitempty"`   // Optional - MinIO generates if empty
-	Policy      string  `json:"policy,omitempty"`      // JSON policy document
-	TargetUser  string  `json:"targetUser,omitempty"`  // User this service account belongs to
-	Expiration  *string `json:"expiration,omitempty"`  // ISO 8601 format
+	AccessKey   string  `json:"accessKey,omitempty"`  // Optional - MinIO generates if empty
+	SecretKey   string  `json:"secretKey,omitempty"`  // Optional - MinIO generates if empty
+	Policy      string  `json:"policy,omitempty"`     // JSON policy document
+	TargetUser  string  `json:"targetUser,omitempty"` // User this service account belongs to
+	Expiration  *string `json:"expiration,omitempty"` // ISO 8601 format
 }
 
 // CreateServiceAccountResponse represents the response from creating a service account
