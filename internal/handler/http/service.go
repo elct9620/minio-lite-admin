@@ -13,12 +13,13 @@ import (
 
 // Service handles all HTTP requests and contains all dependencies
 type Service struct {
-	config                   *config.Config
-	logger                   zerolog.Logger
-	getServerInfoService     *service.GetServerInfoService
-	listAccessKeysService    *service.ListAccessKeysService
-	addServiceAccountService *service.AddServiceAccountService
-	distFS                   embed.FS
+	config                      *config.Config
+	logger                      zerolog.Logger
+	getServerInfoService        *service.GetServerInfoService
+	listAccessKeysService       *service.ListAccessKeysService
+	addServiceAccountService    *service.AddServiceAccountService
+	deleteServiceAccountService *service.DeleteServiceAccountService
+	distFS                      embed.FS
 }
 
 // NewService creates a new HTTP service with all dependencies and returns the configured router
@@ -28,15 +29,17 @@ func NewService(
 	getServerInfoService *service.GetServerInfoService,
 	listAccessKeysService *service.ListAccessKeysService,
 	addServiceAccountService *service.AddServiceAccountService,
+	deleteServiceAccountService *service.DeleteServiceAccountService,
 	distFS embed.FS,
 ) (http.Handler, error) {
 	svc := &Service{
-		config:                   cfg,
-		logger:                   logger,
-		getServerInfoService:     getServerInfoService,
-		listAccessKeysService:    listAccessKeysService,
-		addServiceAccountService: addServiceAccountService,
-		distFS:                   distFS,
+		config:                      cfg,
+		logger:                      logger,
+		getServerInfoService:        getServerInfoService,
+		listAccessKeysService:       listAccessKeysService,
+		addServiceAccountService:    addServiceAccountService,
+		deleteServiceAccountService: deleteServiceAccountService,
+		distFS:                      distFS,
 	}
 
 	router := chi.NewRouter()
@@ -53,6 +56,7 @@ func NewService(
 		r.Get("/data-usage", svc.GetDataUsageHandler)
 		r.Get("/access-keys", svc.GetAccessKeysHandler)
 		r.Post("/access-keys", svc.PostAccessKeysHandler)
+		r.Delete("/access-keys/{accessKey}", svc.DeleteAccessKeysHandler)
 	})
 
 	// Frontend routes

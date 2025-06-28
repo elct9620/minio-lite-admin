@@ -5,6 +5,7 @@ import LoadingSpinner from '../components/common/LoadingSpinner.vue'
 import ErrorMessage from '../components/common/ErrorMessage.vue'
 import AccessKeyCard from '../components/dashboard/AccessKeyCard.vue'
 import CreateAccessKeyModal from '../components/dashboard/CreateAccessKeyModal.vue'
+import ConfirmDeleteModal from '../components/dashboard/ConfirmDeleteModal.vue'
 import { useAccessKeys } from '../composables/useAccessKeys'
 
 const { 
@@ -24,6 +25,8 @@ const {
 
 const selectedFilter = ref<'all' | 'users' | 'serviceAccounts' | 'sts'>('all')
 const showCreateModal = ref(false)
+const showDeleteModal = ref(false)
+const accessKeyToDelete = ref<{ accessKey: string; name?: string } | null>(null)
 
 const filteredAccessKeys = computed(() => {
   switch (selectedFilter.value) {
@@ -46,6 +49,21 @@ const handleFilterChange = async (filter: typeof selectedFilter.value) => {
 const handleAccessKeyCreated = async () => {
   // Refresh the access keys list after creation
   await fetchAccessKeys({ type: selectedFilter.value })
+}
+
+const handleDeleteClick = (accessKey: typeof accessKeys.value[0]) => {
+  accessKeyToDelete.value = {
+    accessKey: accessKey.accessKey,
+    name: accessKey.name
+  }
+  showDeleteModal.value = true
+}
+
+const handleDeleteConfirmed = async () => {
+  // Refresh the access keys list after deletion
+  await fetchAccessKeys({ type: selectedFilter.value })
+  showDeleteModal.value = false
+  accessKeyToDelete.value = null
 }
 
 onMounted(() => {
@@ -174,6 +192,7 @@ onMounted(() => {
             :get-status-color="getStatusColor"
             :get-type-display-name="getTypeDisplayName"
             :get-type-color="getTypeColor"
+            @delete="handleDeleteClick"
           />
         </div>
 
@@ -195,6 +214,15 @@ onMounted(() => {
     <CreateAccessKeyModal 
       v-model:open="showCreateModal" 
       @created="handleAccessKeyCreated"
+    />
+
+    <!-- Delete Confirmation Modal -->
+    <ConfirmDeleteModal
+      v-if="accessKeyToDelete"
+      v-model:open="showDeleteModal"
+      :access-key="accessKeyToDelete.accessKey"
+      :access-key-name="accessKeyToDelete.name"
+      @confirmed="handleDeleteConfirmed"
     />
   </div>
 </template>

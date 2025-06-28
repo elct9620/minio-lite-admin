@@ -9,7 +9,10 @@ interface Props {
   getTypeColor: (type: string) => string
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
+const emit = defineEmits<{
+  'delete': [accessKey: AccessKeyInfo]
+}>()
 
 const formatDate = (dateString: string | undefined) => {
   if (!dateString) return null
@@ -18,6 +21,10 @@ const formatDate = (dateString: string | undefined) => {
   } catch {
     return dateString
   }
+}
+
+const handleDeleteClick = () => {
+  emit('delete', props.accessKey)
 }
 </script>
 
@@ -86,6 +93,7 @@ const formatDate = (dateString: string | undefined) => {
         
         <button
           v-if="accessKey.type === 'serviceAccount'"
+          @click="handleDeleteClick"
           class="text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
           title="Delete Service Account"
         >

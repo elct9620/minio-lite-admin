@@ -51,6 +51,7 @@ func NewMockMinIOServer() *MockMinIOServer {
 		r.Get("/v4/list-access-keys-bulk", mock.handleListAccessKeysBulk)
 		r.Put("/v4/add-service-account", mock.handleAddServiceAccount)
 		r.Post("/v4/add-service-account", mock.handleAddServiceAccount) // Try POST as well
+		r.Delete("/v4/delete-service-account", mock.handleDeleteServiceAccount)
 	})
 
 	// Add a catch-all handler for unhandled requests
@@ -608,4 +609,53 @@ func (TestScenarios) ExpiringAddServiceAccount(expiration time.Time) AddServiceA
 			Expiration:   &expiration,
 		},
 	}
+}
+
+// Delete service account related structures and methods
+
+// SetDeleteServiceAccountError sets an error response for delete service account requests
+func (m *MockMinIOServer) SetDeleteServiceAccountError(statusCode int, message string) {
+	m.responses["delete-service-account-error"] = struct {
+		StatusCode int
+		Message    string
+	}{
+		StatusCode: statusCode,
+		Message:    message,
+	}
+}
+
+// SetDeleteServiceAccountSuccess sets a success response for delete service account requests
+func (m *MockMinIOServer) SetDeleteServiceAccountSuccess() {
+	m.responses["delete-service-account"] = true
+}
+
+// handleDeleteServiceAccount handles the MinIO admin delete service account endpoint
+func (m *MockMinIOServer) handleDeleteServiceAccount(w http.ResponseWriter, r *http.Request) {
+	// Check if we should return an error
+	if errorResponse, exists := m.responses["delete-service-account-error"]; exists {
+		if err, ok := errorResponse.(struct {
+			StatusCode int
+			Message    string
+		}); ok {
+			http.Error(w, err.Message, err.StatusCode)
+			return
+		}
+	}
+
+	// Parse the accessKey parameter from query string
+	accessKey := r.URL.Query().Get("accessKey")
+	if accessKey == "" {
+		http.Error(w, "Missing accessKey parameter", http.StatusBadRequest)
+		return
+	}
+
+	// Return success response (empty body for delete operations)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// Test scenarios for delete service account
+
+// SuccessfulDeleteServiceAccount returns a successful delete operation
+func (TestScenarios) SuccessfulDeleteServiceAccount() bool {
+	return true
 }
