@@ -18,10 +18,20 @@ const emit = defineEmits<{
 const formatDate = (dateString: string | undefined) => {
   if (!dateString) return null
   try {
-    return new Date(dateString).toLocaleDateString()
+    const date = new Date(dateString)
+    // Check if the date is the Unix epoch (1970-01-01) or invalid
+    if (date.getTime() <= 0 || date.getFullYear() === 1970) {
+      return null
+    }
+    return date.toLocaleDateString()
   } catch {
-    return dateString
+    return null
   }
+}
+
+const formatExpiration = (dateString: string | undefined) => {
+  const formattedDate = formatDate(dateString)
+  return formattedDate || 'Never expires'
 }
 
 const handleDeleteClick = () => {
@@ -37,10 +47,10 @@ const handleEditClick = () => {
   <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow">
     <div class="flex items-start justify-between">
       <div class="flex-1 min-w-0">
-        <!-- Access Key ID -->
+        <!-- Primary Display: Name or Access Key -->
         <div class="flex items-center gap-2 mb-2">
           <h3 class="text-sm font-medium text-gray-900 dark:text-white truncate">
-            {{ accessKey.accessKey }}
+            {{ accessKey.name || accessKey.accessKey }}
           </h3>
           <span 
             :class="getTypeColor(accessKey.type)"
@@ -50,20 +60,20 @@ const handleEditClick = () => {
           </span>
         </div>
 
-        <!-- Parent User -->
-        <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">
+        <!-- Access Key ID (if name exists) -->
+        <div v-if="accessKey.name" class="text-sm text-gray-500 dark:text-gray-400 mb-2">
+          <span class="font-medium">Access Key:</span> 
+          <span class="font-mono text-xs">{{ accessKey.accessKey }}</span>
+        </div>
+
+        <!-- Parent User (only for service accounts and STS tokens) -->
+        <div v-if="accessKey.type !== 'user'" class="text-sm text-gray-500 dark:text-gray-400 mb-2">
           <span class="font-medium">Parent User:</span> {{ accessKey.parentUser }}
         </div>
 
-        <!-- Name and Description -->
-        <div v-if="accessKey.name || accessKey.description" class="space-y-1 mb-2">
-          <div v-if="accessKey.name" class="text-sm">
-            <span class="font-medium text-gray-700 dark:text-gray-300">Name:</span>
-            <span class="text-gray-900 dark:text-white ml-1">{{ accessKey.name }}</span>
-          </div>
-          <div v-if="accessKey.description" class="text-sm text-gray-600 dark:text-gray-400">
-            {{ accessKey.description }}
-          </div>
+        <!-- Description -->
+        <div v-if="accessKey.description" class="text-sm text-gray-600 dark:text-gray-400 mb-2">
+          {{ accessKey.description }}
         </div>
 
         <!-- Metadata -->
@@ -80,9 +90,9 @@ const handleEditClick = () => {
             Implied Policy
           </span>
 
-          <span v-if="accessKey.expiration" class="inline-flex items-center text-yellow-600 dark:text-yellow-400">
+          <span class="inline-flex items-center" :class="formatDate(accessKey.expiration) ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-500 dark:text-gray-400'">
             <ClockIcon class="w-3 h-3 mr-1" />
-            Expires: {{ formatDate(accessKey.expiration) }}
+            {{ formatExpiration(accessKey.expiration) }}
           </span>
         </div>
       </div>

@@ -106,23 +106,48 @@ func (s *ListAccessKeysService) Execute(ctx context.Context, opts ListAccessKeys
 		// Add service accounts
 		if opts.Type == "all" || opts.Type == "serviceAccounts" {
 			for _, svcAccount := range accessKeysResp.ServiceAccounts {
-				accessKey := AccessKeyInfo{
-					AccessKey:     svcAccount.AccessKey,
-					ParentUser:    svcAccount.ParentUser,
-					AccountStatus: svcAccount.AccountStatus,
-					Type:          "serviceAccount",
-					Name:          svcAccount.Name,
-					Description:   svcAccount.Description,
-					ImpliedPolicy: svcAccount.ImpliedPolicy,
-				}
+				// Get detailed service account info
+				detailedInfo, err := s.minioClient.InfoServiceAccount(ctx, svcAccount.AccessKey)
+				if err != nil {
+					logger.Warn().Err(err).Str("accessKey", svcAccount.AccessKey).Msg("Failed to get detailed service account info, using basic info")
+					// Fallback to basic info if detailed info fails
+					accessKey := AccessKeyInfo{
+						AccessKey:     svcAccount.AccessKey,
+						ParentUser:    svcAccount.ParentUser,
+						AccountStatus: svcAccount.AccountStatus,
+						Type:          "serviceAccount",
+						Name:          svcAccount.Name,
+						Description:   svcAccount.Description,
+						ImpliedPolicy: svcAccount.ImpliedPolicy,
+					}
 
-				// Convert expiration to ISO 8601 string if present
-				if svcAccount.Expiration != nil {
-					expStr := svcAccount.Expiration.Format("2006-01-02T15:04:05Z07:00")
-					accessKey.Expiration = &expStr
-				}
+					// Convert expiration to ISO 8601 string if present
+					if svcAccount.Expiration != nil {
+						expStr := svcAccount.Expiration.Format("2006-01-02T15:04:05Z07:00")
+						accessKey.Expiration = &expStr
+					}
 
-				allAccessKeys = append(allAccessKeys, accessKey)
+					allAccessKeys = append(allAccessKeys, accessKey)
+				} else {
+					// Use detailed info
+					accessKey := AccessKeyInfo{
+						AccessKey:     svcAccount.AccessKey,
+						ParentUser:    detailedInfo.ParentUser,
+						AccountStatus: detailedInfo.AccountStatus,
+						Type:          "serviceAccount",
+						Name:          detailedInfo.Name,
+						Description:   detailedInfo.Description,
+						ImpliedPolicy: detailedInfo.ImpliedPolicy,
+					}
+
+					// Convert expiration to ISO 8601 string if present
+					if detailedInfo.Expiration != nil {
+						expStr := detailedInfo.Expiration.Format("2006-01-02T15:04:05Z07:00")
+						accessKey.Expiration = &expStr
+					}
+
+					allAccessKeys = append(allAccessKeys, accessKey)
+				}
 			}
 		}
 
