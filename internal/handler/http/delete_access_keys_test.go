@@ -128,7 +128,7 @@ func TestService_DeleteAccessKeysHandler(t *testing.T) {
 			// Create HTTP service
 			testService := createTestServiceForDelete(t, deleteServiceAccountService)
 
-			// Create request with Chi context for URL parameters  
+			// Create request with Chi context for URL parameters
 			// Use a safe URL path - the actual parameter comes from Chi context
 			req := httptest.NewRequest(http.MethodDelete, "/api/access-keys/test", nil)
 

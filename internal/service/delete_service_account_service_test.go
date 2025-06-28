@@ -10,11 +10,11 @@ import (
 
 func TestDeleteServiceAccountService_Execute(t *testing.T) {
 	tests := []struct {
-		name              string
-		setupMock         func(*minio.MockMinIOServer)
-		request           DeleteServiceAccountRequest
-		expectedError     string
-		validateResponse  func(t *testing.T, response *DeleteServiceAccountResponse)
+		name             string
+		setupMock        func(*minio.MockMinIOServer)
+		request          DeleteServiceAccountRequest
+		expectedError    string
+		validateResponse func(t *testing.T, response *DeleteServiceAccountResponse)
 	}{
 		{
 			name: "successful deletion",

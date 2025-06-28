@@ -22,15 +22,15 @@ type MockMinIOServer struct {
 
 // ServiceAccountInfo represents stored service account information
 type ServiceAccountInfo struct {
-	AccessKey    string          `json:"accessKey"`
-	SecretKey    string          `json:"secretKey"`
-	Name         string          `json:"name,omitempty"`
-	Description  string          `json:"description,omitempty"`
-	Status       string          `json:"status"`
-	Policy       json.RawMessage `json:"policy,omitempty"`
-	Expiration   *time.Time      `json:"expiration,omitempty"`
-	ParentUser   string          `json:"parentUser"`
-	CreatedAt    time.Time       `json:"createdAt"`
+	AccessKey   string          `json:"accessKey"`
+	SecretKey   string          `json:"secretKey"`
+	Name        string          `json:"name,omitempty"`
+	Description string          `json:"description,omitempty"`
+	Status      string          `json:"status"`
+	Policy      json.RawMessage `json:"policy,omitempty"`
+	Expiration  *time.Time      `json:"expiration,omitempty"`
+	ParentUser  string          `json:"parentUser"`
+	CreatedAt   time.Time       `json:"createdAt"`
 }
 
 // ServerInfoResponse represents the MinIO admin API server info response format
@@ -64,6 +64,7 @@ func NewMockMinIOServer() *MockMinIOServer {
 		r.Get("/info", mock.handleServerInfo)
 		r.Get("/v4/list-users", mock.handleListUsers)
 		r.Get("/v4/list-access-keys-bulk", mock.handleListAccessKeysBulk)
+		r.Get("/v4/info-service-account", mock.handleInfoServiceAccount)
 		r.Put("/v4/add-service-account", mock.handleAddServiceAccount)
 		r.Post("/v4/add-service-account", mock.handleAddServiceAccount) // Try POST as well
 		r.Put("/v4/update-service-account", mock.handleUpdateServiceAccount)
@@ -833,4 +834,132 @@ func (m *MockMinIOServer) handleUpdateServiceAccount(w http.ResponseWriter, r *h
 // SuccessfulUpdateServiceAccount returns a successful update operation
 func (TestScenarios) SuccessfulUpdateServiceAccount() bool {
 	return true
+}
+
+// InfoServiceAccountResponse represents the response from InfoServiceAccount
+type InfoServiceAccountResponse struct {
+	ParentUser    string          `json:"parentUser"`
+	AccountStatus string          `json:"accountStatus"`
+	ImpliedPolicy bool            `json:"impliedPolicy"`
+	Policy        json.RawMessage `json:"policy,omitempty"`
+	Name          string          `json:"name,omitempty"`
+	Description   string          `json:"description,omitempty"`
+	Expiration    *time.Time      `json:"expiration,omitempty"`
+}
+
+// SetInfoServiceAccountResponse sets the response for info service account requests
+func (m *MockMinIOServer) SetInfoServiceAccountResponse(accessKey string, response InfoServiceAccountResponse) {
+	if m.responses["info-service-account"] == nil {
+		m.responses["info-service-account"] = make(map[string]InfoServiceAccountResponse)
+	}
+	m.responses["info-service-account"].(map[string]InfoServiceAccountResponse)[accessKey] = response
+}
+
+// SetInfoServiceAccountError sets an error response for info service account requests
+func (m *MockMinIOServer) SetInfoServiceAccountError(statusCode int, message string) {
+	m.responses["info-service-account-error"] = struct {
+		StatusCode int
+		Message    string
+	}{
+		StatusCode: statusCode,
+		Message:    message,
+	}
+}
+
+// handleInfoServiceAccount handles the MinIO admin info service account endpoint
+func (m *MockMinIOServer) handleInfoServiceAccount(w http.ResponseWriter, r *http.Request) {
+	// Check if we should return an error
+	if errorResponse, exists := m.responses["info-service-account-error"]; exists {
+		if err, ok := errorResponse.(struct {
+			StatusCode int
+			Message    string
+		}); ok {
+			http.Error(w, err.Message, err.StatusCode)
+			return
+		}
+	}
+
+	// Parse the accessKey parameter from query string
+	accessKey := r.URL.Query().Get("accessKey")
+	if accessKey == "" {
+		http.Error(w, "Missing accessKey parameter", http.StatusBadRequest)
+		return
+	}
+
+	var responseData InfoServiceAccountResponse
+
+	// Check if we have a response for this specific access key
+	if responses, exists := m.responses["info-service-account"]; exists {
+		if infoResponses, ok := responses.(map[string]InfoServiceAccountResponse); ok {
+			if info, found := infoResponses[accessKey]; found {
+				responseData = info
+			} else {
+				// Try to get from service account store
+				if saInfo, found := m.GetServiceAccountFromStore(accessKey); found {
+					responseData = InfoServiceAccountResponse{
+						ParentUser:    saInfo.ParentUser,
+						AccountStatus: saInfo.Status,
+						ImpliedPolicy: true,
+						Policy:        saInfo.Policy,
+						Name:          saInfo.Name,
+						Description:   saInfo.Description,
+						Expiration:    saInfo.Expiration,
+					}
+				} else {
+					http.Error(w, "Service account not found", http.StatusNotFound)
+					return
+				}
+			}
+		}
+	} else {
+		// Try to get from service account store
+		if saInfo, found := m.GetServiceAccountFromStore(accessKey); found {
+			responseData = InfoServiceAccountResponse{
+				ParentUser:    saInfo.ParentUser,
+				AccountStatus: saInfo.Status,
+				ImpliedPolicy: true,
+				Policy:        saInfo.Policy,
+				Name:          saInfo.Name,
+				Description:   saInfo.Description,
+				Expiration:    saInfo.Expiration,
+			}
+		} else {
+			http.Error(w, "Service account not found", http.StatusNotFound)
+			return
+		}
+	}
+
+	// Encode to JSON
+	jsonData, err := json.Marshal(responseData)
+	if err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+
+	// Encrypt the response using the same secret key as the client
+	encryptedData, err := madmin.EncryptData("minioadmin", jsonData)
+	if err != nil {
+		http.Error(w, "Failed to encrypt response", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	if _, err := w.Write(encryptedData); err != nil {
+		http.Error(w, "Failed to write response", http.StatusInternalServerError)
+		return
+	}
+}
+
+// Test scenarios for info service account
+
+// SuccessfulInfoServiceAccount returns a typical service account info response
+func (TestScenarios) SuccessfulInfoServiceAccount(accessKey string) InfoServiceAccountResponse {
+	return InfoServiceAccountResponse{
+		ParentUser:    "minioadmin",
+		AccountStatus: "enabled",
+		ImpliedPolicy: true,
+		Name:          "detailed-service-account",
+		Description:   "Service account with detailed information",
+		Expiration:    nil,
+	}
 }
