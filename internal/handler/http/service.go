@@ -48,9 +48,10 @@ func NewService(
 	router := chi.NewRouter()
 
 	// Add middleware
-	router.Use(Logger(logger))
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.RequestID)
+	router.Use(ContextLogger(logger))
+	router.Use(Logger())
 
 	// API routes
 	router.Route("/api", func(r chi.Router) {
