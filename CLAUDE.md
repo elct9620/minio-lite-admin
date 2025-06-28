@@ -327,57 +327,32 @@ docker pull ghcr.io/[owner]/minio-lite-admin:latest
 docker run -p 8080:8080 ghcr.io/[owner]/minio-lite-admin:latest
 ```
 
-### Current State and Next Steps
+### Current Implementation Status
 
-**Completed**:
-- ✅ Hybrid Go-Vue integration with `olivere/vite`
-- ✅ Chi router with custom zerolog middleware (Recoverer, RequestID)
-- ✅ Viper configuration management (flags, env vars, config files)
-- ✅ Zerolog structured logging with configurable levels and pretty printing
-- ✅ MinIO Admin SDK integration with service layer architecture
-- ✅ Infrastructure layer with MinIO client factory (`internal/infra`)
-- ✅ Service layer for business logic (`internal/service`)
-- ✅ Context-based logging for request tracing
-- ✅ `/api/server-info` endpoint returns MinIO server information
-- ✅ Service-based HTTP handler architecture with dependency injection
-- ✅ Modular UI components following clean architecture principles
-- ✅ Conditional asset embedding with Go build tags
-- ✅ Vue.js 3 + TypeScript frontend scaffold
-- ✅ TailwindCSS 4.1.11 integration with modern/minimal dashboard UI
-- ✅ Dashboard with server status card, loading states, and responsive design
-- ✅ Dark mode support and consistent design tokens
-- ✅ Docker development environment with watch mode and MinIO service
-- ✅ Production Docker build with multi-stage process
-- ✅ Development/production mode switching
-- ✅ Comprehensive CI/CD pipeline with test and lint validation before Docker builds
-- ✅ Graceful HTTP server shutdown with signal handling and timeout
-- ✅ Comprehensive API testing with table-driven tests and httptest
-- ✅ Mock MinIO server infrastructure with chi router for external dependency testing
-- ✅ Server-info endpoint testing with success/error scenarios and timeout resolution
-- ✅ Code quality tools integration (go test, golangci-lint, gofmt)
-- ✅ Disk usage monitoring API with optimized single MinIO API call
-- ✅ `/api/data-usage` endpoint returns comprehensive disk metrics
-- ✅ Frontend disk usage dashboard with real-time data integration
-- ✅ Vue.js composables for API integration with loading and error states
-- ✅ TailwindCSS disk usage components with progress bars and status indicators
-- ✅ Responsive design with dark mode support for disk usage display
-- ✅ Data formatting utilities for human-readable storage values
-- ✅ Access keys API with comprehensive MinIO admin integration
-- ✅ `/api/access-keys` endpoint with type and user filtering capabilities
-- ✅ ListAccessKeysService supporting users, service accounts, and STS keys
-- ✅ Mock MinIO server with madmin-go v4 encryption support
-- ✅ Comprehensive access keys testing with table-driven test patterns
-- ✅ Frontend access keys UI with statistics, filtering, and empty state handling
-- ✅ AccessKeyCard component for displaying individual access key information
-- ✅ useAccessKeys composable for reactive API integration with proper error handling
-- ✅ Fixed API response format to ensure consistent JSON array format (not null)
-- ✅ Cryptographically secure access key generation with crypto.getRandomValues() and enhanced character sets
+**Core Features Implemented**:
+- ✅ `/api/server-info` - MinIO server information
+- ✅ `/api/data-usage` - Disk usage monitoring  
+- ✅ `/api/access-keys` - Access key management (GET, POST, PUT, DELETE)
+- ✅ Vue.js frontend with server dashboard, disk usage, and access key management
+- ✅ Docker development environment with MinIO service
 
-**Next Steps (TODO)**:
-- Site replication configuration and management
-- MinIO connection health check and validation
-- Authentication and authorization system
-- More API endpoints for MinIO operations (buckets, users, policies)
+**Architecture Components**:
+- ✅ Go backend with Chi router and zerolog middleware
+- ✅ Service layer architecture (`internal/service/`) for business logic
+- ✅ Mock MinIO server for testing (`internal/testability/minio/`)
+- ✅ Build tags system for dev/production asset embedding
+- ✅ Vue.js 3 + TypeScript frontend with TailwindCSS
+
+**Development Infrastructure**:
+- ✅ CI/CD pipeline with Go Test, Go Lint, and Docker build
+- ✅ Release-please for automated version management
+- ✅ Table-driven testing patterns with comprehensive coverage
+- ✅ Docker development with hot reload support
+
+**Next Major Features**:
+- Site replication configuration (placeholder view exists)
+- Authentication/authorization system
+- Additional MinIO admin operations
 
 ## License Constraints
 
@@ -489,3 +464,63 @@ This project uses AGPLv3 license due to dependency on `github.com/minio/madmin-g
 - Mock servers require madmin v4 encryption for MinIO Admin API testing
 - Service creation: MinIO auto-generates secure keys when `AccessKey`/`SecretKey` are empty
 - Form validation: Always validate required fields before API calls, show clear error messages
+
+## Release Management
+
+### Release-Please Integration
+- **Automated Releases**: Uses `googleapis/release-please-action@v4` for semantic versioning
+- **Configuration**: Simple workflow in `.github/workflows/release-please.yml`
+- **Permissions**: Requires `contents: write`, `issues: write`, `pull-requests: write`
+- **Initial Version**: Set using `Release-As: 0.1.0` footer in commit message
+- **Version Strategy**: Conventional commits drive version bumps (fix → patch, feat → minor, feat! → major)
+
+### Conventional Commits
+- **Required**: All commits must follow conventional commit format for release automation
+- **Examples**: `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`
+- **Breaking Changes**: Use `!` suffix (e.g., `feat!:`) for major version bumps
+- **AI Attribution**: Include `Co-Authored-By: Claude <noreply@anthropic.com>` for AI-assisted development
+
+## Project Maintenance
+
+### AI-Assisted Development
+- **Policy**: AI tools are welcome, as stated in README.md Contributing section
+- **Attribution**: Include `Co-Authored-By: Claude <noreply@anthropic.com>` for AI-assisted commits
+- **PR Template**: Simple template in `.github/pull_request_template.md` requires AI usage declaration
+
+### GitHub Workflows
+- **CI/CD Pipeline**: `.github/workflows/ci.yml` with Go Test, Go Lint, and Docker build jobs
+- **Release Automation**: `.github/workflows/release-please.yml` for automated version management
+- **PR Template**: `.github/pull_request_template.md` with AI usage declaration and basic requirements
+
+### Recent Development Insights
+- **Dependabot Management**: Use `@dependabot rebase` to fix lint issues after main branch updates
+- **Lint Resolution**: Modern CI improvements resolved previous golangci-lint failures
+- **Docker Improvements**: Resolved build issues with proper source directory copying
+- **Workflow Optimization**: Better job names and streamlined CI process
+
+### Release-Please Usage
+
+**Setup**: Release-please is configured in `.github/workflows/release-please.yml` for automated version management.
+
+**How to Use Release-Please**:
+1. **Commit with conventional format**: `feat:`, `fix:`, `docs:`, `chore:`
+2. **Push to main**: Release-please analyzes commits and creates release PR when needed
+3. **Review release PR**: Check generated CHANGELOG.md and version bump
+4. **Merge release PR**: Creates GitHub release and git tag automatically
+
+**Initial Version Setup**:
+- Use `Release-As: X.Y.Z` footer in commit message to set specific version
+- Example: `git commit --allow-empty -m "chore: initialize release versioning" -m "Release-As: 0.1.0"`
+
+**Version Bumping Rules**:
+- `fix:` → patch version (0.1.0 → 0.1.1)
+- `feat:` → minor version (0.1.0 → 0.2.0)  
+- `feat!:` or `fix!:` → major version (0.1.0 → 1.0.0)
+
+**Current Codebase Status**:
+- Server info and data usage APIs implemented
+- Access key management (create, list, update, delete) implemented
+- Vue.js frontend with TailwindCSS and dark mode
+- Docker development environment with MinIO service
+- CI/CD pipeline with test, lint, and Docker build
+- Release-please configured for version 0.1.0
