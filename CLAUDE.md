@@ -427,6 +427,39 @@ This project uses AGPLv3 license due to dependency on `github.com/minio/madmin-g
 - **Icon System**: Use Heroicons (`@heroicons/vue`) with dynamic component rendering for consistency
 - **Modal Components**: Use overlay patterns with backdrop click handling and form state management
 
+### MinIO Admin API Method Research
+
+**Essential Resource**: Use `go doc github.com/minio/madmin-go/v4.AdminClient.MethodName` to understand:
+- **Endpoint Paths**: All admin methods use `/minio/admin/v4/endpoint-name` pattern
+- **HTTP Methods**: GET, POST, PUT, DELETE based on operation type
+- **Parameters**: Query parameters vs request body structure
+- **Response Format**: Expected status codes and data structures
+
+**Key Examples**:
+- `DeleteServiceAccount`: DELETE `/v4/delete-service-account?accessKey=KEY` → HTTP 204
+- `AddServiceAccount`: PUT `/v4/add-service-account` + encrypted body → HTTP 200 + encrypted response
+- `ListAccessKeysBulk`: GET `/v4/list-access-keys-bulk` + query params → HTTP 200 + encrypted response
+
+**Debug Process**:
+1. Use `go doc` to check madmin method signature and behavior
+2. Check mock server endpoint registration matches actual MinIO paths
+3. Verify query parameter names match exactly (e.g., `accessKey` not `service-account`)
+4. Ensure encrypted request/response handling for methods that require it
+
+### Frontend Modal Pattern
+
+**Component Structure** for delete/confirmation workflows:
+- **Props**: `open: boolean`, specific data fields (accessKey, name, etc.)
+- **Emits**: `'update:open'` for v-model, `'confirmed'` for action completion
+- **State Management**: `loading`, `error`, API call handling within modal
+- **UI Elements**: Warning icon, danger styling, clear action buttons
+- **Error Handling**: Display API errors inline within modal context
+
+**Integration Pattern**:
+- Parent manages modal state (`showModal`, `itemToDelete`)
+- Event handlers: open modal → API call → close + refresh
+- Conditional rendering: `v-if="itemToDelete"` to ensure props are available
+
 ## Development Notes
 
 **Requirements**: Go 1.24+ and Node.js
