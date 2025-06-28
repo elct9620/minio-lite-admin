@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router'
 
 interface MenuItem {
   name: string
-  icon: string
+  icon: any
   path: string
 }
 
@@ -55,9 +55,7 @@ const isOpen = computed({
             : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'"
           @click="isOpen = false"
         >
-          <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon" />
-          </svg>
+          <component :is="item.icon" class="mr-3 h-5 w-5" />
           {{ item.name }}
         </router-link>
       </div>

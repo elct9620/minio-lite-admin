@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { Bars3Icon } from '@heroicons/vue/24/outline'
+
 interface Props {
   title: string
 }
@@ -16,9 +18,7 @@ const emit = defineEmits<{
         @click="emit('toggle-sidebar')"
         class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
       >
-        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
+        <Bars3Icon class="h-6 w-6" />
       </button>
       <h1 class="text-lg font-semibold text-gray-900 dark:text-white">{{ title }}</h1>
       <div></div>

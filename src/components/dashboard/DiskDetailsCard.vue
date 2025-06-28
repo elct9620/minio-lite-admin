@@ -4,6 +4,7 @@ import LoadingSpinner from '../common/LoadingSpinner.vue'
 import ErrorMessage from '../common/ErrorMessage.vue'
 import { useDataUsage, type DiskDetail } from '../../composables/useDataUsage'
 import { formatBytes } from '../../utils/formatBytes'
+import { InboxIcon } from '@heroicons/vue/24/outline'
 
 const { dataUsage, loading, error } = useDataUsage()
 
@@ -124,9 +125,7 @@ function getUsageColor(percentage: number): string {
 
     <div v-else class="flex items-center justify-center h-32 bg-gray-50 dark:bg-gray-700 rounded-lg">
       <div class="text-center">
-        <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-        </svg>
+        <InboxIcon class="mx-auto h-8 w-8 text-gray-400" />
         <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">No disk details available</p>
       </div>
     </div>

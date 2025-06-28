@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { KeyIcon, CheckCircleIcon, BeakerIcon, ClockIcon } from '@heroicons/vue/24/outline'
 import LoadingSpinner from '../components/common/LoadingSpinner.vue'
 import ErrorMessage from '../components/common/ErrorMessage.vue'
 import AccessKeyCard from '../components/dashboard/AccessKeyCard.vue'
@@ -68,9 +69,7 @@ onMounted(() => {
         <div class="flex items-center">
           <div class="flex-shrink-0">
             <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
-              <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1721 9z" />
-              </svg>
+              <KeyIcon class="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
           <div class="ml-4">
@@ -84,9 +83,7 @@ onMounted(() => {
         <div class="flex items-center">
           <div class="flex-shrink-0">
             <div class="w-8 h-8 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
-              <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <CheckCircleIcon class="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
           <div class="ml-4">
@@ -100,9 +97,7 @@ onMounted(() => {
         <div class="flex items-center">
           <div class="flex-shrink-0">
             <div class="w-8 h-8 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
-              <svg class="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-              </svg>
+              <BeakerIcon class="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
           <div class="ml-4">
@@ -116,9 +111,7 @@ onMounted(() => {
         <div class="flex items-center">
           <div class="flex-shrink-0">
             <div class="w-8 h-8 bg-orange-100 dark:bg-orange-900 rounded-lg flex items-center justify-center">
-              <svg class="w-5 h-5 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <ClockIcon class="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
           <div class="ml-4">
@@ -176,9 +169,7 @@ onMounted(() => {
 
         <div v-else class="flex items-center justify-center h-48 bg-gray-50 dark:bg-gray-700 rounded-lg">
           <div class="text-center">
-            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1721 9z" />
-            </svg>
+            <KeyIcon class="mx-auto h-12 w-12 text-gray-400" />
             <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
               {{ selectedFilter === 'all' ? 'No access keys found' : `No ${selectedFilter.replace(/([A-Z])/g, ' $1').toLowerCase()} found` }}
             </p>
