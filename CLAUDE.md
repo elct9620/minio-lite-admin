@@ -407,9 +407,11 @@ This project uses AGPLv3 license due to dependency on `github.com/minio/madmin-g
 
 ### MinIO Admin API Integration
 - **Access Keys API**: Unified interface for users, service accounts, and STS keys via `ListAccessKeysBulk()`
+- **Service Account Creation**: `AddServiceAccount()` auto-generates keys when not provided, accepts custom keys
 - **madmin-go v4**: Requires encrypted responses in mock servers using `madmin.EncryptData()`
 - **API Options**: Mutually exclusive options require conditional handling (`All: true` vs specific users)
 - **Constants**: Always use madmin package constants (e.g., `madmin.AccessKeyListUsersOnly`) for type safety
+- **Policy Configuration**: JSON policies passed as `[]byte` in `AddServiceAccountReq.Policy`
 
 ### API Response Format and Frontend Integration
 
@@ -422,6 +424,8 @@ This project uses AGPLv3 license due to dependency on `github.com/minio/madmin-g
 - **Composables**: Reusable API logic with reactive refs for loading, error, and data states
 - **Component Architecture**: `<script setup>` with TypeScript, proper loading/error/empty states
 - **SPA Routing**: Backend serves `index.html` for non-API routes using `isStaticAsset()` detection
+- **Icon System**: Use Heroicons (`@heroicons/vue`) with dynamic component rendering for consistency
+- **Modal Components**: Use overlay patterns with backdrop click handling and form state management
 
 ## Development Notes
 
@@ -432,3 +436,5 @@ This project uses AGPLv3 license due to dependency on `github.com/minio/madmin-g
 - Development: Vite dev server, Production: embedded assets with `-tags dist`
 - All slice responses must be initialized to `[]` (not `nil`) for JSON compatibility
 - Mock servers require madmin v4 encryption for MinIO Admin API testing
+- Service creation: MinIO auto-generates secure keys when `AccessKey`/`SecretKey` are empty
+- Form validation: Always validate required fields before API calls, show clear error messages
