@@ -156,24 +156,28 @@ const createServiceAccount = async () => {
   }
 }
 
-// Generate random access key
+// Generate cryptographically secure random access key
 const generateAccessKey = () => {
-  // Generate a random access key (20 characters, alphanumeric)
+  // AWS-compatible format: AKIA prefix + 16 secure chars
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-  let result = ''
-  for (let i = 0; i < 20; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length))
+  const array = new Uint8Array(16)
+  crypto.getRandomValues(array)
+  let result = 'AKIA'
+  for (let i = 0; i < 16; i++) {
+    result += chars[array[i] % chars.length]
   }
   form.value.accessKey = result
 }
 
-// Generate random secret key
+// Generate cryptographically secure random secret key
 const generateSecretKey = () => {
-  // Generate a random secret key (40 characters, base64-like)
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+  // Enhanced character set with special characters for better entropy
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=!@#$%^&*()_-[]{}|;:,.<>?'
+  const array = new Uint8Array(40)
+  crypto.getRandomValues(array)
   let result = ''
   for (let i = 0; i < 40; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length))
+    result += chars[array[i] % chars.length]
   }
   form.value.secretKey = result
 }
