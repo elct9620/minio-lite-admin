@@ -15,8 +15,22 @@ import (
 
 // MockMinIOServer provides a mock MinIO server for testing
 type MockMinIOServer struct {
-	server    *httptest.Server
-	responses map[string]interface{}
+	server          *httptest.Server
+	responses       map[string]interface{}
+	serviceAccounts map[string]*ServiceAccountInfo // In-memory store for service accounts
+}
+
+// ServiceAccountInfo represents stored service account information
+type ServiceAccountInfo struct {
+	AccessKey    string          `json:"accessKey"`
+	SecretKey    string          `json:"secretKey"`
+	Name         string          `json:"name,omitempty"`
+	Description  string          `json:"description,omitempty"`
+	Status       string          `json:"status"`
+	Policy       json.RawMessage `json:"policy,omitempty"`
+	Expiration   *time.Time      `json:"expiration,omitempty"`
+	ParentUser   string          `json:"parentUser"`
+	CreatedAt    time.Time       `json:"createdAt"`
 }
 
 // ServerInfoResponse represents the MinIO admin API server info response format
@@ -29,7 +43,8 @@ type ServerInfoResponse struct {
 // NewMockMinIOServer creates a new mock MinIO server
 func NewMockMinIOServer() *MockMinIOServer {
 	mock := &MockMinIOServer{
-		responses: make(map[string]interface{}),
+		responses:       make(map[string]interface{}),
+		serviceAccounts: make(map[string]*ServiceAccountInfo),
 	}
 
 	// Set default responses
@@ -51,6 +66,8 @@ func NewMockMinIOServer() *MockMinIOServer {
 		r.Get("/v4/list-access-keys-bulk", mock.handleListAccessKeysBulk)
 		r.Put("/v4/add-service-account", mock.handleAddServiceAccount)
 		r.Post("/v4/add-service-account", mock.handleAddServiceAccount) // Try POST as well
+		r.Put("/v4/update-service-account", mock.handleUpdateServiceAccount)
+		r.Post("/v4/update-service-account", mock.handleUpdateServiceAccount) // Add POST support
 		r.Delete("/v4/delete-service-account", mock.handleDeleteServiceAccount)
 	})
 
@@ -73,6 +90,59 @@ func (m *MockMinIOServer) Close() {
 // URL returns the mock server URL
 func (m *MockMinIOServer) URL() string {
 	return m.server.URL
+}
+
+// AddServiceAccountToStore adds a service account to the in-memory store
+func (m *MockMinIOServer) AddServiceAccountToStore(accessKey, secretKey, name, description, status, parentUser string, policy json.RawMessage, expiration *time.Time) {
+	m.serviceAccounts[accessKey] = &ServiceAccountInfo{
+		AccessKey:   accessKey,
+		SecretKey:   secretKey,
+		Name:        name,
+		Description: description,
+		Status:      status,
+		Policy:      policy,
+		Expiration:  expiration,
+		ParentUser:  parentUser,
+		CreatedAt:   time.Now(),
+	}
+}
+
+// GetServiceAccountFromStore retrieves a service account from the in-memory store
+func (m *MockMinIOServer) GetServiceAccountFromStore(accessKey string) (*ServiceAccountInfo, bool) {
+	sa, exists := m.serviceAccounts[accessKey]
+	return sa, exists
+}
+
+// UpdateServiceAccountInStore updates a service account in the in-memory store
+func (m *MockMinIOServer) UpdateServiceAccountInStore(accessKey string, updates map[string]interface{}) bool {
+	sa, exists := m.serviceAccounts[accessKey]
+	if !exists {
+		return false
+	}
+
+	// Apply updates
+	if name, ok := updates["name"]; ok {
+		sa.Name = name.(string)
+	}
+	if description, ok := updates["description"]; ok {
+		sa.Description = description.(string)
+	}
+	if status, ok := updates["status"]; ok {
+		sa.Status = status.(string)
+	}
+	if policy, ok := updates["policy"]; ok {
+		sa.Policy = policy.(json.RawMessage)
+	}
+	if secretKey, ok := updates["secretKey"]; ok {
+		sa.SecretKey = secretKey.(string)
+	}
+	if expiration, ok := updates["expiration"]; ok {
+		if exp, ok := expiration.(*time.Time); ok {
+			sa.Expiration = exp
+		}
+	}
+
+	return true
 }
 
 // SetServerInfoResponse sets the response for server info requests
@@ -657,5 +727,110 @@ func (m *MockMinIOServer) handleDeleteServiceAccount(w http.ResponseWriter, r *h
 
 // SuccessfulDeleteServiceAccount returns a successful delete operation
 func (TestScenarios) SuccessfulDeleteServiceAccount() bool {
+	return true
+}
+
+// Update service account related structures and methods
+
+// UpdateServiceAccountRequest represents the MinIO admin update service account request
+type UpdateServiceAccountRequest struct {
+	NewPolicy      json.RawMessage `json:"newPolicy,omitempty"`
+	NewSecretKey   string          `json:"newSecretKey,omitempty"`
+	NewStatus      string          `json:"newStatus,omitempty"`
+	NewName        string          `json:"newName,omitempty"`
+	NewDescription string          `json:"newDescription,omitempty"`
+	NewExpiration  *time.Time      `json:"newExpiration,omitempty"`
+}
+
+// SetUpdateServiceAccountError sets an error response for update service account requests
+func (m *MockMinIOServer) SetUpdateServiceAccountError(statusCode int, message string) {
+	m.responses["update-service-account-error"] = struct {
+		StatusCode int
+		Message    string
+	}{
+		StatusCode: statusCode,
+		Message:    message,
+	}
+}
+
+// SetUpdateServiceAccountSuccess sets a success response for update service account requests
+func (m *MockMinIOServer) SetUpdateServiceAccountSuccess() {
+	m.responses["update-service-account"] = true
+}
+
+// handleUpdateServiceAccount handles the MinIO admin update service account endpoint
+func (m *MockMinIOServer) handleUpdateServiceAccount(w http.ResponseWriter, r *http.Request) {
+	// Check if we should return an error
+	if errorResponse, exists := m.responses["update-service-account-error"]; exists {
+		if err, ok := errorResponse.(struct {
+			StatusCode int
+			Message    string
+		}); ok {
+			http.Error(w, err.Message, err.StatusCode)
+			return
+		}
+	}
+
+	// Parse the accessKey parameter from query string
+	accessKey := r.URL.Query().Get("accessKey")
+	if accessKey == "" {
+		http.Error(w, "Missing accessKey parameter", http.StatusBadRequest)
+		return
+	}
+
+	// Read and decrypt request body
+	encryptedBody, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		return
+	}
+
+	// Decrypt the request using the same secret key as the client
+	decryptedBody, err := madmin.DecryptData("minioadmin", bytes.NewReader(encryptedBody))
+	if err != nil {
+		http.Error(w, "Failed to decrypt request body", http.StatusBadRequest)
+		return
+	}
+
+	var req UpdateServiceAccountRequest
+	if err := json.Unmarshal(decryptedBody, &req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Update service account in store
+	updates := make(map[string]interface{})
+	if req.NewPolicy != nil && len(req.NewPolicy) > 0 {
+		updates["policy"] = req.NewPolicy
+	}
+	if req.NewSecretKey != "" {
+		updates["secretKey"] = req.NewSecretKey
+	}
+	if req.NewStatus != "" {
+		updates["status"] = req.NewStatus
+	}
+	if req.NewName != "" {
+		updates["name"] = req.NewName
+	}
+	if req.NewDescription != "" {
+		updates["description"] = req.NewDescription
+	}
+	if req.NewExpiration != nil {
+		updates["expiration"] = req.NewExpiration
+	}
+
+	if !m.UpdateServiceAccountInStore(accessKey, updates) {
+		http.Error(w, "Service account not found", http.StatusNotFound)
+		return
+	}
+
+	// UpdateServiceAccount in madmin returns no response body
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// Test scenarios for update service account
+
+// SuccessfulUpdateServiceAccount returns a successful update operation
+func (TestScenarios) SuccessfulUpdateServiceAccount() bool {
 	return true
 }

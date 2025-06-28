@@ -6,6 +6,7 @@ import ErrorMessage from '../components/common/ErrorMessage.vue'
 import AccessKeyCard from '../components/dashboard/AccessKeyCard.vue'
 import CreateAccessKeyModal from '../components/dashboard/CreateAccessKeyModal.vue'
 import ConfirmDeleteModal from '../components/dashboard/ConfirmDeleteModal.vue'
+import EditAccessKeyModal from '../components/dashboard/EditAccessKeyModal.vue'
 import { useAccessKeys } from '../composables/useAccessKeys'
 
 const { 
@@ -25,7 +26,9 @@ const {
 
 const selectedFilter = ref<'all' | 'users' | 'serviceAccounts' | 'sts'>('all')
 const showCreateModal = ref(false)
+const showEditModal = ref(false)
 const showDeleteModal = ref(false)
+const accessKeyToEdit = ref<typeof accessKeys.value[0] | null>(null)
 const accessKeyToDelete = ref<{ accessKey: string; name?: string } | null>(null)
 
 const filteredAccessKeys = computed(() => {
@@ -51,12 +54,24 @@ const handleAccessKeyCreated = async () => {
   await fetchAccessKeys({ type: selectedFilter.value })
 }
 
+const handleEditClick = (accessKey: typeof accessKeys.value[0]) => {
+  accessKeyToEdit.value = accessKey
+  showEditModal.value = true
+}
+
 const handleDeleteClick = (accessKey: typeof accessKeys.value[0]) => {
   accessKeyToDelete.value = {
     accessKey: accessKey.accessKey,
     name: accessKey.name
   }
   showDeleteModal.value = true
+}
+
+const handleEditConfirmed = async () => {
+  // Refresh the access keys list after update
+  await fetchAccessKeys({ type: selectedFilter.value })
+  showEditModal.value = false
+  accessKeyToEdit.value = null
 }
 
 const handleDeleteConfirmed = async () => {
@@ -192,6 +207,7 @@ onMounted(() => {
             :get-status-color="getStatusColor"
             :get-type-display-name="getTypeDisplayName"
             :get-type-color="getTypeColor"
+            @edit="handleEditClick"
             @delete="handleDeleteClick"
           />
         </div>
@@ -214,6 +230,13 @@ onMounted(() => {
     <CreateAccessKeyModal 
       v-model:open="showCreateModal" 
       @created="handleAccessKeyCreated"
+    />
+
+    <!-- Edit Access Key Modal -->
+    <EditAccessKeyModal
+      v-model:open="showEditModal"
+      :access-key="accessKeyToEdit"
+      @updated="handleEditConfirmed"
     />
 
     <!-- Delete Confirmation Modal -->

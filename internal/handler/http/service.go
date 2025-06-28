@@ -19,6 +19,7 @@ type Service struct {
 	listAccessKeysService       *service.ListAccessKeysService
 	addServiceAccountService    *service.AddServiceAccountService
 	deleteServiceAccountService *service.DeleteServiceAccountService
+	updateServiceAccountService *service.UpdateServiceAccountService
 	distFS                      embed.FS
 }
 
@@ -30,6 +31,7 @@ func NewService(
 	listAccessKeysService *service.ListAccessKeysService,
 	addServiceAccountService *service.AddServiceAccountService,
 	deleteServiceAccountService *service.DeleteServiceAccountService,
+	updateServiceAccountService *service.UpdateServiceAccountService,
 	distFS embed.FS,
 ) (http.Handler, error) {
 	svc := &Service{
@@ -39,6 +41,7 @@ func NewService(
 		listAccessKeysService:       listAccessKeysService,
 		addServiceAccountService:    addServiceAccountService,
 		deleteServiceAccountService: deleteServiceAccountService,
+		updateServiceAccountService: updateServiceAccountService,
 		distFS:                      distFS,
 	}
 
@@ -56,6 +59,7 @@ func NewService(
 		r.Get("/data-usage", svc.GetDataUsageHandler)
 		r.Get("/access-keys", svc.GetAccessKeysHandler)
 		r.Post("/access-keys", svc.PostAccessKeysHandler)
+		r.Put("/access-keys/{accessKey}", svc.PutAccessKeysHandler)
 		r.Delete("/access-keys/{accessKey}", svc.DeleteAccessKeysHandler)
 	})
 

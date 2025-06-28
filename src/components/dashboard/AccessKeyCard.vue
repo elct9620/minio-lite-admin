@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CheckCircleIcon, ClockIcon, EyeIcon, TrashIcon } from '@heroicons/vue/24/outline'
+import { CheckCircleIcon, ClockIcon, TrashIcon, PencilIcon } from '@heroicons/vue/24/outline'
 import type { AccessKeyInfo } from '../../composables/useAccessKeys'
 
 interface Props {
@@ -12,6 +12,7 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits<{
   'delete': [accessKey: AccessKeyInfo]
+  'edit': [accessKey: AccessKeyInfo]
 }>()
 
 const formatDate = (dateString: string | undefined) => {
@@ -25,6 +26,10 @@ const formatDate = (dateString: string | undefined) => {
 
 const handleDeleteClick = () => {
   emit('delete', props.accessKey)
+}
+
+const handleEditClick = () => {
+  emit('edit', props.accessKey)
 }
 </script>
 
@@ -85,10 +90,12 @@ const handleDeleteClick = () => {
       <!-- Actions -->
       <div class="flex items-center space-x-2 ml-4">
         <button
-          class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-          title="View Details"
+          v-if="accessKey.type === 'serviceAccount'"
+          @click="handleEditClick"
+          class="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+          title="Edit Service Account"
         >
-          <EyeIcon class="w-5 h-5" />
+          <PencilIcon class="w-5 h-5" />
         </button>
         
         <button
