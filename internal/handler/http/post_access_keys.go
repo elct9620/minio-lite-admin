@@ -21,18 +21,12 @@ func (s *Service) PostAccessKeysHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Validate required fields
-	if req.Name == "" {
-		logger.Warn().Msg("Service account name is required")
-		http.Error(w, "Service account name is required", http.StatusBadRequest)
-		return
-	}
-
 	// Create service account
 	response, err := s.addServiceAccountService.Execute(ctx, req)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to create service account")
-		http.Error(w, "Failed to create service account", http.StatusInternalServerError)
+		// Pass through the actual error message for better debugging
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 

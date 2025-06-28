@@ -78,11 +78,6 @@ const closeModal = () => {
 
 // Create service account
 const createServiceAccount = async () => {
-  if (!form.value.name.trim()) {
-    error.value = 'Service account name is required'
-    return
-  }
-
   loading.value = true
   error.value = null
 
@@ -113,8 +108,24 @@ const createServiceAccount = async () => {
     })
 
     if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(errorText || 'Failed to create service account')
+      let errorMessage = 'Failed to create service account'
+      try {
+        const errorText = await response.text()
+        if (errorText) {
+          // Try to parse JSON error response first
+          try {
+            const errorJson = JSON.parse(errorText)
+            errorMessage = errorJson.message || errorJson.error || errorText
+          } catch {
+            // If not JSON, use the text directly
+            errorMessage = errorText
+          }
+        }
+      } catch {
+        // If reading response fails, use status text
+        errorMessage = `Request failed with status ${response.status}: ${response.statusText}`
+      }
+      throw new Error(errorMessage)
     }
 
     const result: CreateAccessKeyResponse = await response.json()
@@ -188,15 +199,17 @@ const generateSecretKey = () => {
             <!-- Name (required) -->
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Service Account Name *
+                Service Account Name
               </label>
               <input
                 v-model="form.name"
                 type="text"
-                required
                 class="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="Enter service account name"
+                placeholder="Enter service account name (optional)"
               />
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Optional name for the service account. If not provided, MinIO will generate one.
+              </p>
             </div>
 
             <!-- Description -->
@@ -341,7 +354,7 @@ const generateSecretKey = () => {
           </button>
           <button
             @click="createServiceAccount"
-            :disabled="loading || !form.name.trim()"
+            :disabled="loading"
             class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
           >
             <span v-if="loading" class="mr-2">

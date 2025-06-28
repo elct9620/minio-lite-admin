@@ -52,6 +52,32 @@ func TestService_PostAccessKeysHandler(t *testing.T) {
 			},
 		},
 		{
+			name: "successful creation without name (MinIO auto-generates)",
+			setupMock: func(mock *minio.MockMinIOServer) {
+				scenarios := minio.TestScenarios{}
+				mock.SetAddServiceAccountResponse(scenarios.SuccessfulAddServiceAccount())
+			},
+			requestBody: service.CreateServiceAccountRequest{
+				Description: "Service account without explicit name",
+			},
+			expectedStatusCode: http.StatusCreated,
+			validateResponse: func(t *testing.T, response *service.CreateServiceAccountResponse) {
+				if response.AccessKey != "AKIAIOSFODNN7EXAMPLE" {
+					t.Errorf("Expected AccessKey %q, got %q", "AKIAIOSFODNN7EXAMPLE", response.AccessKey)
+				}
+				if response.SecretKey != "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" {
+					t.Errorf("Expected SecretKey %q, got %q", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", response.SecretKey)
+				}
+				// Name should be empty when not provided
+				if response.Name != "" {
+					t.Errorf("Expected empty Name, got %q", response.Name)
+				}
+				if response.Description != "Service account without explicit name" {
+					t.Errorf("Expected Description %q, got %q", "Service account without explicit name", response.Description)
+				}
+			},
+		},
+		{
 			name: "successful creation with custom keys",
 			setupMock: func(mock *minio.MockMinIOServer) {
 				scenarios := minio.TestScenarios{}
@@ -127,20 +153,24 @@ func TestService_PostAccessKeysHandler(t *testing.T) {
 			},
 		},
 		{
-			name:               "missing name validation",
-			setupMock:          func(mock *minio.MockMinIOServer) {},
+			name: "missing name handled by MinIO",
+			setupMock: func(mock *minio.MockMinIOServer) {
+				mock.SetAddServiceAccountError(400, "The service account name is invalid")
+			},
 			requestBody:        service.CreateServiceAccountRequest{},
-			expectedStatusCode: http.StatusBadRequest,
-			expectedError:      "Service account name is required",
+			expectedStatusCode: http.StatusInternalServerError,
+			expectedError:      "The service account name is invalid",
 		},
 		{
-			name:      "empty name validation",
-			setupMock: func(mock *minio.MockMinIOServer) {},
+			name: "empty name handled by MinIO",
+			setupMock: func(mock *minio.MockMinIOServer) {
+				mock.SetAddServiceAccountError(400, "The service account name is invalid")
+			},
 			requestBody: service.CreateServiceAccountRequest{
 				Name: "",
 			},
-			expectedStatusCode: http.StatusBadRequest,
-			expectedError:      "Service account name is required",
+			expectedStatusCode: http.StatusInternalServerError,
+			expectedError:      "The service account name is invalid",
 		},
 		{
 			name:      "whitespace-only name validation",
@@ -149,7 +179,7 @@ func TestService_PostAccessKeysHandler(t *testing.T) {
 				Name: "   ",
 			},
 			expectedStatusCode: http.StatusInternalServerError,
-			expectedError:      "Failed to create service account",
+			expectedError:      "failed to create service account:",
 		},
 		{
 			name:               "invalid JSON body",
@@ -167,7 +197,7 @@ func TestService_PostAccessKeysHandler(t *testing.T) {
 				Name: "error-service-account",
 			},
 			expectedStatusCode: http.StatusInternalServerError,
-			expectedError:      "Failed to create service account",
+			expectedError:      "Internal Server Error",
 		},
 		{
 			name: "MinIO authentication error",
@@ -178,7 +208,7 @@ func TestService_PostAccessKeysHandler(t *testing.T) {
 				Name: "auth-error-service-account",
 			},
 			expectedStatusCode: http.StatusInternalServerError,
-			expectedError:      "Failed to create service account",
+			expectedError:      "Unauthorized",
 		},
 	}
 
@@ -356,22 +386,26 @@ func TestService_PostAccessKeysHandler_EdgeCases(t *testing.T) {
 			expectedError:      "Invalid request body",
 		},
 		{
-			name:      "null JSON body",
-			setupMock: func(mock *minio.MockMinIOServer) {},
+			name: "null JSON body",
+			setupMock: func(mock *minio.MockMinIOServer) {
+				mock.SetAddServiceAccountError(400, "The service account name is invalid")
+			},
 			setupRequest: func() *http.Request {
 				return httptest.NewRequest(http.MethodPost, "/api/access-keys", bytes.NewReader([]byte("null")))
 			},
-			expectedStatusCode: http.StatusBadRequest,
-			expectedError:      "Service account name is required",
+			expectedStatusCode: http.StatusInternalServerError,
+			expectedError:      "The service account name is invalid",
 		},
 		{
-			name:      "empty JSON object",
-			setupMock: func(mock *minio.MockMinIOServer) {},
+			name: "empty JSON object handled by MinIO",
+			setupMock: func(mock *minio.MockMinIOServer) {
+				mock.SetAddServiceAccountError(400, "The service account name is invalid")
+			},
 			setupRequest: func() *http.Request {
 				return httptest.NewRequest(http.MethodPost, "/api/access-keys", bytes.NewReader([]byte("{}")))
 			},
-			expectedStatusCode: http.StatusBadRequest,
-			expectedError:      "Service account name is required",
+			expectedStatusCode: http.StatusInternalServerError,
+			expectedError:      "The service account name is invalid",
 		},
 		{
 			name: "request with extra fields",
