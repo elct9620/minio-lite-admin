@@ -33,7 +33,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 # Copy backend source
-COPY *.go ./
+COPY . .
 
 # Copy built frontend assets from previous stage
 COPY --from=frontend-builder /app/dist ./dist/
