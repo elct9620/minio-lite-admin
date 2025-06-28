@@ -15,13 +15,13 @@ type UpdateServiceAccountService struct {
 }
 
 type UpdateServiceAccountRequest struct {
-	AccessKey      string     `json:"accessKey"`
-	NewPolicy      string     `json:"newPolicy,omitempty"`
-	NewSecretKey   string     `json:"newSecretKey,omitempty"`
-	NewStatus      string     `json:"newStatus,omitempty"`
-	NewName        string     `json:"newName,omitempty"`
-	NewDescription string     `json:"newDescription,omitempty"`
-	NewExpiration  *time.Time `json:"newExpiration,omitempty"`
+	AccessKey      string `json:"accessKey"`
+	NewPolicy      string `json:"newPolicy,omitempty"`
+	NewSecretKey   string `json:"newSecretKey,omitempty"`
+	NewStatus      string `json:"newStatus,omitempty"`
+	NewName        string `json:"newName,omitempty"`
+	NewDescription string `json:"newDescription,omitempty"`
+	NewExpiration  *int64 `json:"newExpiration,omitempty"` // Unix timestamp in seconds
 }
 
 type UpdateServiceAccountResponse struct {
@@ -83,8 +83,10 @@ func (s *UpdateServiceAccountService) Execute(ctx context.Context, req UpdateSer
 	}
 
 	// Set expiration if provided
-	if req.NewExpiration != nil {
-		updateReq.NewExpiration = req.NewExpiration
+	if req.NewExpiration != nil && *req.NewExpiration > 0 {
+		expTime := time.Unix(*req.NewExpiration, 0)
+		updateReq.NewExpiration = &expTime
+		logger.Debug().Int64("newExpiration", *req.NewExpiration).Time("newExpirationTime", expTime).Msg("Setting new expiration time")
 	}
 
 	// Execute the update

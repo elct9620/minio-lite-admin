@@ -15,13 +15,13 @@ type AddServiceAccountService struct {
 
 // CreateServiceAccountRequest represents the request to create a service account
 type CreateServiceAccountRequest struct {
-	Name        string  `json:"name,omitempty"`
-	Description string  `json:"description,omitempty"`
-	AccessKey   string  `json:"accessKey,omitempty"`  // Optional - MinIO generates if empty
-	SecretKey   string  `json:"secretKey,omitempty"`  // Optional - MinIO generates if empty
-	Policy      string  `json:"policy,omitempty"`     // JSON policy document
-	TargetUser  string  `json:"targetUser,omitempty"` // User this service account belongs to
-	Expiration  *string `json:"expiration,omitempty"` // ISO 8601 format
+	Name        string `json:"name,omitempty"`
+	Description string `json:"description,omitempty"`
+	AccessKey   string `json:"accessKey,omitempty"`  // Optional - MinIO generates if empty
+	SecretKey   string `json:"secretKey,omitempty"`  // Optional - MinIO generates if empty
+	Policy      string `json:"policy,omitempty"`     // JSON policy document
+	TargetUser  string `json:"targetUser,omitempty"` // User this service account belongs to
+	Expiration  *int64 `json:"expiration,omitempty"` // Unix timestamp in seconds
 }
 
 // CreateServiceAccountResponse represents the response from creating a service account
@@ -64,13 +64,10 @@ func (s *AddServiceAccountService) Execute(ctx context.Context, req CreateServic
 	}
 
 	// Parse expiration if provided
-	if req.Expiration != nil && *req.Expiration != "" {
-		expTime, err := time.Parse(time.RFC3339, *req.Expiration)
-		if err != nil {
-			logger.Error().Err(err).Str("expiration", *req.Expiration).Msg("Failed to parse expiration time")
-			return nil, fmt.Errorf("invalid expiration format, expected RFC3339: %w", err)
-		}
+	if req.Expiration != nil && *req.Expiration > 0 {
+		expTime := time.Unix(*req.Expiration, 0)
 		addReq.Expiration = &expTime
+		logger.Debug().Int64("expiration", *req.Expiration).Time("expirationTime", expTime).Msg("Setting expiration time")
 	}
 
 	// Create the service account

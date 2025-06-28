@@ -105,7 +105,7 @@ func TestUpdateServiceAccountService_Execute(t *testing.T) {
 			},
 			request: UpdateServiceAccountRequest{
 				AccessKey:     "AKIAIOSFODNN7EXAMPLE",
-				NewExpiration: func() *time.Time { t := time.Now().Add(24 * time.Hour); return &t }(),
+				NewExpiration: func() *int64 { t := time.Now().Add(24 * time.Hour).Unix(); return &t }(),
 			},
 			expectError: false,
 			validateResponse: func(t *testing.T, response *UpdateServiceAccountResponse) {
@@ -129,7 +129,7 @@ func TestUpdateServiceAccountService_Execute(t *testing.T) {
 				NewStatus:      string(madmin.AccountEnabled),
 				NewName:        "Full Update Service Account",
 				NewDescription: "Fully updated description",
-				NewExpiration:  func() *time.Time { t := time.Now().Add(48 * time.Hour); return &t }(),
+				NewExpiration:  func() *int64 { t := time.Now().Add(48 * time.Hour).Unix(); return &t }(),
 			},
 			expectError: false,
 			validateResponse: func(t *testing.T, response *UpdateServiceAccountResponse) {

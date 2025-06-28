@@ -14,7 +14,7 @@ interface UpdateAccessKeyRequest {
   newStatus?: string
   newName?: string
   newDescription?: string
-  newExpiration?: string
+  newExpiration?: number
 }
 
 interface UpdateAccessKeyResponse {
@@ -45,6 +45,30 @@ const showSecretKey = ref(false)
 const showRotateSecret = ref(false)
 const showAdvancedOptions = ref(false)
 
+// Helper functions for datetime conversion
+const convertFromTimestamp = (timestamp: number): string => {
+  if (!timestamp) return ''
+  try {
+    const date = new Date(timestamp * 1000) // Convert from seconds to milliseconds
+    // Convert to local datetime string in format YYYY-MM-DDTHH:MM
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    return `${year}-${month}-${day}T${hours}:${minutes}`
+  } catch {
+    return ''
+  }
+}
+
+const convertToTimestamp = (datetimeLocal: string): number | undefined => {
+  if (!datetimeLocal) return undefined
+  // Convert datetime-local to timestamp (seconds)
+  const date = new Date(datetimeLocal)
+  return Math.floor(date.getTime() / 1000)
+}
+
 // Modal control
 const isOpen = computed({
   get: () => props.open,
@@ -60,7 +84,7 @@ watch(() => props.accessKey, (newAccessKey) => {
       newStatus: newAccessKey.accountStatus,
       newName: newAccessKey.name || '',
       newDescription: newAccessKey.description || '',
-      newExpiration: newAccessKey.expiration || ''
+      newExpiration: convertFromTimestamp(newAccessKey.expiration as any || 0)
     }
     // Reset UI state
     showSecretKey.value = false
@@ -126,8 +150,8 @@ const updateServiceAccount = async () => {
       payload.newSecretKey = form.value.newSecretKey.trim()
     }
     
-    if (form.value.newExpiration !== (props.accessKey.expiration || '')) {
-      payload.newExpiration = form.value.newExpiration || undefined
+    if (form.value.newExpiration !== convertFromTimestamp(props.accessKey.expiration as any || 0)) {
+      payload.newExpiration = convertToTimestamp(form.value.newExpiration)
     }
 
     // Only proceed if there are actual changes

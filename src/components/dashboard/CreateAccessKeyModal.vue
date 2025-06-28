@@ -13,7 +13,7 @@ interface CreateAccessKeyRequest {
   secretKey: string
   policy: string
   targetUser: string
-  expiration: string
+  expiration: number | undefined
 }
 
 interface CreateAccessKeyResponse {
@@ -76,6 +76,14 @@ const closeModal = () => {
   resetForm()
 }
 
+// Helper function to convert datetime-local to Unix timestamp
+const convertToTimestamp = (datetimeLocal: string): number | undefined => {
+  if (!datetimeLocal) return undefined
+  // Convert datetime-local to timestamp (milliseconds)
+  const date = new Date(datetimeLocal)
+  return Math.floor(date.getTime() / 1000) // Convert to seconds
+}
+
 // Create service account
 const createServiceAccount = async () => {
   loading.value = true
@@ -83,12 +91,12 @@ const createServiceAccount = async () => {
 
   try {
     // Prepare request payload
-    const payload: Partial<CreateAccessKeyRequest> = {
+    const payload: any = {
       name: form.value.name.trim(),
       description: form.value.description.trim() || undefined,
       policy: form.value.policy.trim() || undefined,
       targetUser: form.value.targetUser.trim() || undefined,
-      expiration: form.value.expiration || undefined
+      expiration: convertToTimestamp(form.value.expiration)
     }
 
     // Only include custom keys if specified

@@ -112,7 +112,7 @@ func TestService_PutAccessKeysHandler(t *testing.T) {
 			},
 			accessKey: "AKIAIOSFODNN7EXAMPLE",
 			requestBody: map[string]interface{}{
-				"newExpiration": time.Now().Add(24 * time.Hour).Format(time.RFC3339),
+				"newExpiration": time.Now().Add(24 * time.Hour).Unix(),
 			},
 			expectedStatusCode: http.StatusOK,
 			validateResponse: func(t *testing.T, response *service.UpdateServiceAccountResponse) {
@@ -136,7 +136,7 @@ func TestService_PutAccessKeysHandler(t *testing.T) {
 				"newStatus":      string(madmin.AccountEnabled),
 				"newName":        "Full Update Service Account",
 				"newDescription": "Fully updated description",
-				"newExpiration":  time.Now().Add(48 * time.Hour).Format(time.RFC3339),
+				"newExpiration":  time.Now().Add(48 * time.Hour).Unix(),
 			},
 			expectedStatusCode: http.StatusOK,
 			validateResponse: func(t *testing.T, response *service.UpdateServiceAccountResponse) {

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/elct9620/minio-lite-admin/internal/service"
 	"github.com/go-chi/chi/v5"
@@ -25,12 +24,12 @@ func (svc *Service) PutAccessKeysHandler(w http.ResponseWriter, r *http.Request)
 
 	// Parse request body
 	var updateReq struct {
-		NewPolicy      string     `json:"newPolicy,omitempty"`
-		NewSecretKey   string     `json:"newSecretKey,omitempty"`
-		NewStatus      string     `json:"newStatus,omitempty"`
-		NewName        string     `json:"newName,omitempty"`
-		NewDescription string     `json:"newDescription,omitempty"`
-		NewExpiration  *time.Time `json:"newExpiration,omitempty"`
+		NewPolicy      string `json:"newPolicy,omitempty"`
+		NewSecretKey   string `json:"newSecretKey,omitempty"`
+		NewStatus      string `json:"newStatus,omitempty"`
+		NewName        string `json:"newName,omitempty"`
+		NewDescription string `json:"newDescription,omitempty"`
+		NewExpiration  *int64 `json:"newExpiration,omitempty"` // Unix timestamp in seconds
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&updateReq); err != nil {

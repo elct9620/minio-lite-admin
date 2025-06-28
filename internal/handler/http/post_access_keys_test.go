@@ -134,8 +134,8 @@ func TestService_PostAccessKeysHandler(t *testing.T) {
 			},
 			requestBody: service.CreateServiceAccountRequest{
 				Name: "expiring-service-account",
-				Expiration: func() *string {
-					exp := time.Now().Add(24 * time.Hour).Format(time.RFC3339)
+				Expiration: func() *int64 {
+					exp := time.Now().Add(24 * time.Hour).Unix()
 					return &exp
 				}(),
 			},

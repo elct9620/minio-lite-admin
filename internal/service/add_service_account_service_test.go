@@ -104,8 +104,8 @@ func TestAddServiceAccountService_Execute(t *testing.T) {
 			},
 			request: CreateServiceAccountRequest{
 				Name: "expiring-service-account",
-				Expiration: func() *string {
-					exp := time.Now().Add(24 * time.Hour).Format(time.RFC3339)
+				Expiration: func() *int64 {
+					exp := time.Now().Add(24 * time.Hour).Unix()
 					return &exp
 				}(),
 			},
@@ -154,8 +154,8 @@ func TestAddServiceAccountService_Execute(t *testing.T) {
 				SecretKey:   "completeSecret456",
 				Policy:      `{"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": ["s3:*"], "Resource": ["*"]}]}`,
 				TargetUser:  "admin",
-				Expiration: func() *string {
-					exp := time.Now().Add(24 * time.Hour).Format(time.RFC3339)
+				Expiration: func() *int64 {
+					exp := time.Now().Add(24 * time.Hour).Unix()
 					return &exp
 				}(),
 			},
@@ -172,13 +172,13 @@ func TestAddServiceAccountService_Execute(t *testing.T) {
 			},
 		},
 		{
-			name:      "invalid expiration format",
+			name:      "invalid expiration (negative timestamp)",
 			setupMock: func(mock *minio.MockMinIOServer) {},
 			request: CreateServiceAccountRequest{
 				Name:       "invalid-expiration",
-				Expiration: func() *string { exp := "invalid-date"; return &exp }(),
+				Expiration: func() *int64 { exp := int64(-1); return &exp }(),
 			},
-			expectedError: "invalid expiration format, expected RFC3339",
+			expectedError: "", // Negative timestamps are technically valid, just in the past
 		},
 		{
 			name: "MinIO server error",
